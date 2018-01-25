@@ -9,65 +9,76 @@
 import UIKit
 import AVFoundation
 import Photos
+import os.log
+
 
 class ViewController: UIViewController {
 
     @IBOutlet weak var previewView: UIView!
-    @IBOutlet weak var captureImageView: UIImageView!
     
-    var session: AVCaptureSession?
-    var stillImageOutput: AVCapturePhotoOutput?
-    var videoPreviewLayer: AVCaptureVideoPreviewLayer?
+    private let captureSession = AVCaptureSession()
+    var capturePhotoOutput: AVCapturePhotoOutput?
+    var previewLayer: AVCaptureVideoPreviewLayer?
     
+    private let sessionQueue = DispatchQueue(label: "session queue") // Communicate with the session and other session objects on this queue.
+    
+    var isCaptureSessionConfigured = false // Instance proprerty on this view controller class
+
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.checkCameraAuthorization { authorized in
-            if authorized {
-                // Proceed to set up and use the camera.
-            } else {
-                print("Permission to use camera denied.")
-                
-                //Exit the application
-                UIControl().sendAction(#selector(NSXPCConnection.suspend),
-                                       to: UIApplication.shared, for: nil)
-            }
-        }
+        self.previewLayer = AVCaptureVideoPreviewLayer(session: self.captureSession)
+        self.previewLayer?.videoGravity = AVLayerVideoGravity.resizeAspect
+        self.previewView.layer.addSublayer(self.previewLayer!)
+        self.previewLayer?.frame = previewView.bounds
         
-        
+        print("view did load")
+        os_log("This is a log message.")
+
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        session = AVCaptureSession()
-        session!.sessionPreset = AVCaptureSession.Preset.photo
+        print("view will appear")
+
         
-        guard let backCam = AVCaptureDevice.default(for: .video) else {
-            fatalError("No vidoe device found")
-        }
-        
-        var error: NSError?
-        var input: AVCaptureDeviceInput!
-        
-        do{
-            input = try AVCaptureDeviceInput(device: backCam)
-            
-        } catch let error1 as NSError {
-            error = error1
-            input = nil
-            print(error!.localizedDescription)
-        }
-        
-        if error == nil && session!.canAddInput(input) {
-            session!.addInput(input)
-            
-            stillImageOutput = AVCapturePhotoOutput()
-            
-            
-            
+        if self.isCaptureSessionConfigured {
+            if !(self.captureSession.isRunning) {
+                self.captureSession.startRunning()
+                print("configured and is not running")
+            }
+        } else {
+            print("not configured")
+
+            // First time: request camera access, configure capture session and start it.
+            self.checkCameraAuthorization({ authorized in
+                guard authorized else {
+                    print("Permission to use camera denied.")
+                    return
+                }
+                
+                self.configureCaptureSession({ success in
+                    guard success else { return }
+                    self.isCaptureSessionConfigured = true
+                    
+                    self.captureSession.startRunning()
+//                        DispatchQueue.main.async {
+//                            self.previewView.updateVideoOrientationForDeviceOrientation()
+//                        }
+                })
+            })
         }
     }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        if captureSession.isRunning {
+            captureSession.stopRunning()
+        }
+    }
+
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
@@ -78,6 +89,53 @@ class ViewController: UIViewController {
         
     }
     
+    
+    func defaultDevice() -> AVCaptureDevice {
+        if let device = AVCaptureDevice.default(AVCaptureDevice.DeviceType.builtInDualCamera,
+                                                for: AVMediaType.video,
+                                                position: AVCaptureDevice.Position.back) {
+            return device // use dual camera on supported devices
+        } else if let device = AVCaptureDevice.default(AVCaptureDevice.DeviceType.builtInWideAngleCamera,
+                                                       for: AVMediaType.video,
+                                                       position: .back) {
+            return device // use default back facing camera otherwise
+        } else {
+            fatalError("All supported devices are expected to have at least one of the queried capture devices.")
+        }
+    }
+    
+    func configureCaptureSession(_ completionHandler: ((_ success: Bool) -> Void)) {
+        var success = false
+        defer { completionHandler(success) } // Ensure all exit paths call completion handler.
+        
+        // Get video input for the default camera.
+        let videoCaptureDevice = defaultDevice()
+        guard let videoInput = try? AVCaptureDeviceInput(device: videoCaptureDevice) else {
+            print("Unable to obtain video input for default camera.")
+            return
+        }
+        
+        // Create and configure the photo output.
+        let capturePhotoOutput = AVCapturePhotoOutput()
+        capturePhotoOutput.isHighResolutionCaptureEnabled = true
+        capturePhotoOutput.isLivePhotoCaptureEnabled = capturePhotoOutput.isLivePhotoCaptureSupported
+        
+        // Make sure inputs and output can be added to session.
+        guard self.captureSession.canAddInput(videoInput) else { return }
+        guard self.captureSession.canAddOutput(capturePhotoOutput) else { return }
+        
+        // Configure the session.
+        self.captureSession.beginConfiguration()
+        self.captureSession.sessionPreset = AVCaptureSession.Preset.photo
+        self.captureSession.addInput(videoInput)
+        self.captureSession.addOutput(capturePhotoOutput)
+        self.captureSession.commitConfiguration()
+        
+        self.capturePhotoOutput = capturePhotoOutput
+        
+        success = true
+    }
+
     
     func checkCameraAuthorization(_ completionHandler: @escaping ((_ authorized: Bool) -> Void)) {
         switch AVCaptureDevice.authorizationStatus(for: AVMediaType.video) {
@@ -126,8 +184,6 @@ class ViewController: UIViewController {
             completionHandler(false)
         }
     }
-    
-
 }
 
 
