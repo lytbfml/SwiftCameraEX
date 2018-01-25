@@ -31,4 +31,5 @@ playground.xcworkspace
 # Package.pins
 # Package.resolved
 .build/
-SwiftCamBasic/SwiftCamBasic/.DS_Store
+
+.DS_Store
