@@ -123,7 +123,7 @@ class ViewController: UIViewController {
         photoSettings.isAutoStillImageStabilizationEnabled = false
         photoSettings.isHighResolutionPhotoEnabled = true
 
-        //capturePhotoOutput.capturePhoto(with: photoSettings, delegate: self)
+        capturePhotoOutput.capturePhoto(with: photoSettings, delegate: self)
         
     }
     
@@ -228,102 +228,11 @@ class ViewController: UIViewController {
         }
     }
     
-    
-    func saveRAWPlusJPEGPhotoLibrary(_ rawSampleBuffer: CMSampleBuffer,
-                                     rawPreviewSampleBuffer: CMSampleBuffer?,
-                                     photoSampleBuffer: CMSampleBuffer,
-                                     previewSampleBuffer: CMSampleBuffer?,
-                                     completionHandler: ((_ success: Bool, _ error: Error?) -> Void)?) {
-        self.checkPhotoLibraryAuthorization({ authorized in
-            guard authorized else {
-                print("Permission to access photo library denied.")
-                completionHandler?(false, nil)
-                return
-            }
-            
-            guard let jpegData = AVCapturePhotoOutput.jpegPhotoDataRepresentation(
-                forJPEGSampleBuffer: photoSampleBuffer,
-                previewPhotoSampleBuffer: previewSampleBuffer)
-                else {
-                    print("Unable to create JPEG data.")
-                    completionHandler?(false, nil)
-                    return
-            }
-            
-            guard let dngData = AVCapturePhotoOutput.dngPhotoDataRepresentation(
-                forRawSampleBuffer: rawSampleBuffer,
-                previewPhotoSampleBuffer: rawPreviewSampleBuffer)
-                else {
-                    print("Unable to create DNG data.")
-                    completionHandler?(false, nil)
-                    return
-            }
-            
-            let dngFileURL = self.makeUniqueTempFileURL(typeExtension: "dng")
-            do {
-                try dngData.write(to: dngFileURL, options: [])
-            } catch let error as NSError {
-                print("Unable to write DNG file.")
-                completionHandler?(false, error)
-                return
-            }
-            
-            PHPhotoLibrary.shared().performChanges( {
-                let creationRequest = PHAssetCreationRequest.forAsset()
-                let creationOptions = PHAssetResourceCreationOptions()
-                creationOptions.shouldMoveFile = true
-                creationRequest.addResource(with: .photo, data: jpegData, options: nil)
-                creationRequest.addResource(with: .alternatePhoto, fileURL: dngFileURL, options: creationOptions)
-            }, completionHandler: completionHandler)
-        })
-    }
  
 }
 
 
 extension ViewController : AVCapturePhotoCaptureDelegate {
-    
-    
-//    func photoOutput(_ captureOutput: AVCapturePhotoOutput,
-//                     didFinishProcessingPhoto photoSampleBuffer: CMSampleBuffer?,
-//                     previewPhoto previewPhotoSampleBuffer: CMSampleBuffer?,
-//                     resolvedSettings: AVCaptureResolvedPhotoSettings,
-//                     bracketSettings: AVCaptureBracketedStillImageSettings?,
-//                     error: Error?) {
-//        guard error == nil, let photoSampleBuffer = photoSampleBuffer else {
-//            print("Error capturing photo:\(String(describing: error))")
-//            return
-//        }
-//
-//        self.photoSampleBuffer = photoSampleBuffer
-//        self.previewPhotoSampleBuffer = previewPhotoSampleBuffer
-//    }
-    
-//    func photoOutput(_ captureOutput: AVCapturePhotoOutput,
-//                     didFinishProcessingRawPhoto rawSampleBuffer: CMSampleBuffer?,
-//                     previewPhoto previewPhotoSampleBuffer: CMSampleBuffer?,
-//                     resolvedSettings: AVCaptureResolvedPhotoSettings,
-//                     bracketSettings: AVCaptureBracketedStillImageSettings?,
-//                     error: Error?) {
-//        guard error == nil, let rawSampleBuffer = rawSampleBuffer else {
-//            print("Error capturing RAW photo:\(String(describing: error))")
-//            return
-//        }
-//
-//        self.rawSampleBuffer = rawSampleBuffer
-//        self.rawPreviewPhotoSampleBuffer = previewPhotoSampleBuffer
-//
-//        let dngData = rawSampleBuffer.fileDataRepresentation()
-//        let dngFileURL = "test.dng"
-//        do {
-//            try dngData.write(to: dngFileURL, options: [])
-//        } catch let error as NSError {
-//            print("Unable to write DNG file.")
-//            completionHandler?(false, error)
-//            return
-//        }
-//
-//    }
     
     func photoOutput(_ output: AVCapturePhotoOutput,
                 didFinishProcessingPhoto photo: AVCapturePhoto,
@@ -336,40 +245,15 @@ extension ViewController : AVCapturePhotoCaptureDelegate {
             print("Fail to convert pixel buffer")
             return
         }
-        let dngFileURL = "test.dng"
-                do {
-                    try dngData.write(to: dngFileURL, options: [])
-                } catch let error as NSError {
-                    print("Unable to write DNG file.")
-                    completionHandler?(false, error)
-                    return
-                }
+        
+        let capturedImage = UIImage.init(data: dngData , scale: 1.0)
+        
+        if let image = capturedImage {
+            // Save our captured image to photos album
+            UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+        }
+        
     }
-    
-//    func photoOutput(_ captureOutput: AVCapturePhotoOutput,
-//                     didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings,
-//                     error: Error?) {
-//        guard error == nil else {
-//            print("Error in capture process: \(String(describing: error))")
-//            return
-//        }
-//
-//        if let rawSampleBuffer = self.rawSampleBuffer, let photoSampleBuffer = self.photoSampleBuffer {
-//
-//            saveRAWPlusJPEGPhotoLibrary(rawSampleBuffer,
-//                                        rawPreviewSampleBuffer: self.rawPreviewPhotoSampleBuffer,
-//                                        photoSampleBuffer: photoSampleBuffer,
-//                                        previewSampleBuffer: self.previewPhotoSampleBuffer,
-//                                        completionHandler: { success, error in
-//
-//                    if success {
-//                        print("Added RAW+JPEG photo to library.")
-//                    } else {
-//                        print("Error adding RAW+JPEG photo to library: \(String(describing: error))")
-//                    }
-//            })
-//        }
-//    }
 }
 
 

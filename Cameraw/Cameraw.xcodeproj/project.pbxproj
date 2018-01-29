@@ -7,27 +7,25 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		4F41C6B62019A3FC003F178D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F41C6B52019A3FC003F178D /* AppDelegate.swift */; };
-		4F41C6B82019A3FC003F178D /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F41C6B72019A3FC003F178D /* ViewController.swift */; };
-		4F41C6BB2019A3FC003F178D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4F41C6B92019A3FC003F178D /* Main.storyboard */; };
-		4F41C6BD2019A3FC003F178D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4F41C6BC2019A3FC003F178D /* Assets.xcassets */; };
-		4F41C6C02019A3FC003F178D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4F41C6BE2019A3FC003F178D /* LaunchScreen.storyboard */; };
-		4FDB8469201FBD400099BDEC /* old.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4FDB8468201FBD400099BDEC /* old.txt */; };
+		4FDB8477201FBFD50099BDEC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FDB8476201FBFD50099BDEC /* AppDelegate.swift */; };
+		4FDB8479201FBFD50099BDEC /* CamViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FDB8478201FBFD50099BDEC /* CamViewController.swift */; };
+		4FDB847C201FBFD50099BDEC /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4FDB847A201FBFD50099BDEC /* Main.storyboard */; };
+		4FDB847E201FBFD50099BDEC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4FDB847D201FBFD50099BDEC /* Assets.xcassets */; };
+		4FDB8481201FBFD50099BDEC /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4FDB847F201FBFD50099BDEC /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		4F41C6B22019A3FC003F178D /* SwiftCamBasic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwiftCamBasic.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		4F41C6B52019A3FC003F178D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		4F41C6B72019A3FC003F178D /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
-		4F41C6BA2019A3FC003F178D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		4F41C6BC2019A3FC003F178D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		4F41C6BF2019A3FC003F178D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		4F41C6C12019A3FC003F178D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		4FDB8468201FBD400099BDEC /* old.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = old.txt; sourceTree = "<group>"; };
+		4FDB8473201FBFD50099BDEC /* Cameraw.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cameraw.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4FDB8476201FBFD50099BDEC /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		4FDB8478201FBFD50099BDEC /* CamViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CamViewController.swift; sourceTree = "<group>"; };
+		4FDB847B201FBFD50099BDEC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		4FDB847D201FBFD50099BDEC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4FDB8480201FBFD50099BDEC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		4FDB8482201FBFD50099BDEC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		4F41C6AF2019A3FC003F178D /* Frameworks */ = {
+		4FDB8470201FBFD50099BDEC /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -37,73 +35,72 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		4F41C6A92019A3FC003F178D = {
+		4FDB846A201FBFD50099BDEC = {
 			isa = PBXGroup;
 			children = (
-				4F41C6B42019A3FC003F178D /* SwiftCamBasic */,
-				4F41C6B32019A3FC003F178D /* Products */,
+				4FDB8475201FBFD50099BDEC /* Cameraw */,
+				4FDB8474201FBFD50099BDEC /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		4F41C6B32019A3FC003F178D /* Products */ = {
+		4FDB8474201FBFD50099BDEC /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4F41C6B22019A3FC003F178D /* SwiftCamBasic.app */,
+				4FDB8473201FBFD50099BDEC /* Cameraw.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		4F41C6B42019A3FC003F178D /* SwiftCamBasic */ = {
+		4FDB8475201FBFD50099BDEC /* Cameraw */ = {
 			isa = PBXGroup;
 			children = (
-				4F41C6B52019A3FC003F178D /* AppDelegate.swift */,
-				4F41C6B72019A3FC003F178D /* ViewController.swift */,
-				4F41C6B92019A3FC003F178D /* Main.storyboard */,
-				4F41C6BC2019A3FC003F178D /* Assets.xcassets */,
-				4F41C6BE2019A3FC003F178D /* LaunchScreen.storyboard */,
-				4F41C6C12019A3FC003F178D /* Info.plist */,
-				4FDB8468201FBD400099BDEC /* old.txt */,
+				4FDB8476201FBFD50099BDEC /* AppDelegate.swift */,
+				4FDB8478201FBFD50099BDEC /* CamViewController.swift */,
+				4FDB847A201FBFD50099BDEC /* Main.storyboard */,
+				4FDB847D201FBFD50099BDEC /* Assets.xcassets */,
+				4FDB847F201FBFD50099BDEC /* LaunchScreen.storyboard */,
+				4FDB8482201FBFD50099BDEC /* Info.plist */,
 			);
-			path = SwiftCamBasic;
+			path = Cameraw;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		4F41C6B12019A3FC003F178D /* SwiftCamBasic */ = {
+		4FDB8472201FBFD50099BDEC /* Cameraw */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4F41C6C42019A3FC003F178D /* Build configuration list for PBXNativeTarget "SwiftCamBasic" */;
+			buildConfigurationList = 4FDB8485201FBFD50099BDEC /* Build configuration list for PBXNativeTarget "Cameraw" */;
 			buildPhases = (
-				4F41C6AE2019A3FC003F178D /* Sources */,
-				4F41C6AF2019A3FC003F178D /* Frameworks */,
-				4F41C6B02019A3FC003F178D /* Resources */,
+				4FDB846F201FBFD50099BDEC /* Sources */,
+				4FDB8470201FBFD50099BDEC /* Frameworks */,
+				4FDB8471201FBFD50099BDEC /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = SwiftCamBasic;
-			productName = SwiftCamBasic;
-			productReference = 4F41C6B22019A3FC003F178D /* SwiftCamBasic.app */;
+			name = Cameraw;
+			productName = Cameraw;
+			productReference = 4FDB8473201FBFD50099BDEC /* Cameraw.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		4F41C6AA2019A3FC003F178D /* Project object */ = {
+		4FDB846B201FBFD50099BDEC /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				LastSwiftUpdateCheck = 0920;
 				LastUpgradeCheck = 0920;
 				ORGANIZATIONNAME = "Yangxiao Wang";
 				TargetAttributes = {
-					4F41C6B12019A3FC003F178D = {
+					4FDB8472201FBFD50099BDEC = {
 						CreatedOnToolsVersion = 9.2;
 						ProvisioningStyle = Automatic;
 					};
 				};
 			};
-			buildConfigurationList = 4F41C6AD2019A3FC003F178D /* Build configuration list for PBXProject "SwiftCamBasic" */;
+			buildConfigurationList = 4FDB846E201FBFD50099BDEC /* Build configuration list for PBXProject "Cameraw" */;
 			compatibilityVersion = "Xcode 8.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -111,55 +108,54 @@
 				en,
 				Base,
 			);
-			mainGroup = 4F41C6A92019A3FC003F178D;
-			productRefGroup = 4F41C6B32019A3FC003F178D /* Products */;
+			mainGroup = 4FDB846A201FBFD50099BDEC;
+			productRefGroup = 4FDB8474201FBFD50099BDEC /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				4F41C6B12019A3FC003F178D /* SwiftCamBasic */,
+				4FDB8472201FBFD50099BDEC /* Cameraw */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		4F41C6B02019A3FC003F178D /* Resources */ = {
+		4FDB8471201FBFD50099BDEC /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4FDB8469201FBD400099BDEC /* old.txt in Resources */,
-				4F41C6C02019A3FC003F178D /* LaunchScreen.storyboard in Resources */,
-				4F41C6BD2019A3FC003F178D /* Assets.xcassets in Resources */,
-				4F41C6BB2019A3FC003F178D /* Main.storyboard in Resources */,
+				4FDB8481201FBFD50099BDEC /* LaunchScreen.storyboard in Resources */,
+				4FDB847E201FBFD50099BDEC /* Assets.xcassets in Resources */,
+				4FDB847C201FBFD50099BDEC /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		4F41C6AE2019A3FC003F178D /* Sources */ = {
+		4FDB846F201FBFD50099BDEC /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4F41C6B82019A3FC003F178D /* ViewController.swift in Sources */,
-				4F41C6B62019A3FC003F178D /* AppDelegate.swift in Sources */,
+				4FDB8479201FBFD50099BDEC /* CamViewController.swift in Sources */,
+				4FDB8477201FBFD50099BDEC /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		4F41C6B92019A3FC003F178D /* Main.storyboard */ = {
+		4FDB847A201FBFD50099BDEC /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				4F41C6BA2019A3FC003F178D /* Base */,
+				4FDB847B201FBFD50099BDEC /* Base */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
 		};
-		4F41C6BE2019A3FC003F178D /* LaunchScreen.storyboard */ = {
+		4FDB847F201FBFD50099BDEC /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				4F41C6BF2019A3FC003F178D /* Base */,
+				4FDB8480201FBFD50099BDEC /* Base */,
 			);
 			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
@@ -167,7 +163,7 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		4F41C6C22019A3FC003F178D /* Debug */ = {
+		4FDB8483201FBFD50099BDEC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -224,7 +220,7 @@
 			};
 			name = Debug;
 		};
-		4F41C6C32019A3FC003F178D /* Release */ = {
+		4FDB8484201FBFD50099BDEC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -274,30 +270,30 @@
 			};
 			name = Release;
 		};
-		4F41C6C52019A3FC003F178D /* Debug */ = {
+		4FDB8486201FBFD50099BDEC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = MX32H8HK28;
-				INFOPLIST_FILE = SwiftCamBasic/Info.plist;
+				INFOPLIST_FILE = Cameraw/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.yangxiao.SwiftCamBasic;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yangxiao.Cameraw;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
-		4F41C6C62019A3FC003F178D /* Release */ = {
+		4FDB8487201FBFD50099BDEC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = MX32H8HK28;
-				INFOPLIST_FILE = SwiftCamBasic/Info.plist;
+				INFOPLIST_FILE = Cameraw/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.yangxiao.SwiftCamBasic;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yangxiao.Cameraw;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 4.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -307,25 +303,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4F41C6AD2019A3FC003F178D /* Build configuration list for PBXProject "SwiftCamBasic" */ = {
+		4FDB846E201FBFD50099BDEC /* Build configuration list for PBXProject "Cameraw" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				4F41C6C22019A3FC003F178D /* Debug */,
-				4F41C6C32019A3FC003F178D /* Release */,
+				4FDB8483201FBFD50099BDEC /* Debug */,
+				4FDB8484201FBFD50099BDEC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		4F41C6C42019A3FC003F178D /* Build configuration list for PBXNativeTarget "SwiftCamBasic" */ = {
+		4FDB8485201FBFD50099BDEC /* Build configuration list for PBXNativeTarget "Cameraw" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				4F41C6C52019A3FC003F178D /* Debug */,
-				4F41C6C62019A3FC003F178D /* Release */,
+				4FDB8486201FBFD50099BDEC /* Debug */,
+				4FDB8487201FBFD50099BDEC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 4F41C6AA2019A3FC003F178D /* Project object */;
+	rootObject = 4FDB846B201FBFD50099BDEC /* Project object */;
 }
