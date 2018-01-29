@@ -12,6 +12,8 @@
 		4F41C6BB2019A3FC003F178D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4F41C6B92019A3FC003F178D /* Main.storyboard */; };
 		4F41C6BD2019A3FC003F178D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4F41C6BC2019A3FC003F178D /* Assets.xcassets */; };
 		4F41C6C02019A3FC003F178D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4F41C6BE2019A3FC003F178D /* LaunchScreen.storyboard */; };
+		4FDB8467201FBBB90099BDEC /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FDB8466201FBBB90099BDEC /* PreviewView.swift */; };
+		4FDB8469201FBD400099BDEC /* old.txt in Resources */ = {isa = PBXBuildFile; fileRef = 4FDB8468201FBD400099BDEC /* old.txt */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,6 +24,8 @@
 		4F41C6BC2019A3FC003F178D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4F41C6BF2019A3FC003F178D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		4F41C6C12019A3FC003F178D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4FDB8466201FBBB90099BDEC /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
+		4FDB8468201FBD400099BDEC /* old.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = old.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,11 +59,13 @@
 			isa = PBXGroup;
 			children = (
 				4F41C6B52019A3FC003F178D /* AppDelegate.swift */,
+				4FDB8466201FBBB90099BDEC /* PreviewView.swift */,
 				4F41C6B72019A3FC003F178D /* ViewController.swift */,
 				4F41C6B92019A3FC003F178D /* Main.storyboard */,
 				4F41C6BC2019A3FC003F178D /* Assets.xcassets */,
 				4F41C6BE2019A3FC003F178D /* LaunchScreen.storyboard */,
 				4F41C6C12019A3FC003F178D /* Info.plist */,
+				4FDB8468201FBD400099BDEC /* old.txt */,
 			);
 			path = SwiftCamBasic;
 			sourceTree = "<group>";
@@ -123,6 +129,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4FDB8469201FBD400099BDEC /* old.txt in Resources */,
 				4F41C6C02019A3FC003F178D /* LaunchScreen.storyboard in Resources */,
 				4F41C6BD2019A3FC003F178D /* Assets.xcassets in Resources */,
 				4F41C6BB2019A3FC003F178D /* Main.storyboard in Resources */,
@@ -138,6 +145,7 @@
 			files = (
 				4F41C6B82019A3FC003F178D /* ViewController.swift in Sources */,
 				4F41C6B62019A3FC003F178D /* AppDelegate.swift in Sources */,
+				4FDB8467201FBBB90099BDEC /* PreviewView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -2,7 +2,7 @@
 //  ViewController.swift
 //  SwiftCamBasic
 //
-//  Created by J L Newman on 1/24/18.
+//  Created by Yangxiao Wang on 1/24/18.
 //  Copyright © 2018 Yangxiao Wang. All rights reserved.
 //
 
@@ -17,13 +17,21 @@ class ViewController: UIViewController {
     @IBOutlet weak var previewView: UIView!
     
     private let captureSession = AVCaptureSession()
-    var capturePhotoOutput: AVCapturePhotoOutput?
-    var previewLayer: AVCaptureVideoPreviewLayer?
+    private var capturePhotoOutput: AVCapturePhotoOutput?
+    private var previewLayer: AVCaptureVideoPreviewLayer?
+    
+    var photoSampleBuffer: CMSampleBuffer?
+    var previewPhotoSampleBuffer: CMSampleBuffer?
+    var rawSampleBuffer: CMSampleBuffer?
+    var rawPreviewPhotoSampleBuffer: CMSampleBuffer?
+    
+    // Capture raw image
+//    let photoSettingsRaw = AVCapturePhotoSettings(rawPixelFormatType: rawFormatType)
+    
     
     private let sessionQueue = DispatchQueue(label: "session queue") // Communicate with the session and other session objects on this queue.
     
     var isCaptureSessionConfigured = false // Instance proprerty on this view controller class
-
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -33,15 +41,14 @@ class ViewController: UIViewController {
         self.previewView.layer.addSublayer(self.previewLayer!)
         self.previewLayer?.frame = previewView.bounds
         
+        
+        
         print("view did load")
-        os_log("This is a log message.")
-
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         print("view will appear")
-
         
         if self.isCaptureSessionConfigured {
             if !(self.captureSession.isRunning) {
@@ -69,6 +76,10 @@ class ViewController: UIViewController {
                 })
             })
         }
+        
+        
+        
+
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -85,24 +96,41 @@ class ViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
     
-    @IBAction func didTakePhoto(_ sender: Any) {
+    
+    @IBOutlet weak var photoButton: UIButton!
+    
+    private func capturePhoto() {
+        
+        guard let capturePhotoOutput = self.capturePhotoOutput else { return }
+
+        
+        // Photo settings for RAW capture.
+        let rawFormatType = kCVPixelFormatType_14Bayer_RGGB
+        // At this point the array should not be empty (session has been configured).
+        guard capturePhotoOutput.availableRawPhotoPixelFormatTypes.contains(NSNumber(value: rawFormatType).uint32Value) else {
+            print("No available RAW pixel formats")
+            return
+        }
+        guard let availableRawFormat = capturePhotoOutput.availableRawPhotoPixelFormatTypes.first else { return }
+        
+        print(availableRawFormat)
+        print(rawFormatType)
+        
+        
+        let photoSettings = AVCapturePhotoSettings(rawPixelFormatType: rawFormatType)
+        
+        photoSettings.flashMode = .off
+        photoSettings.isAutoStillImageStabilizationEnabled = false
+        photoSettings.isHighResolutionPhotoEnabled = true
+
+        //capturePhotoOutput.capturePhoto(with: photoSettings, delegate: self)
         
     }
     
-    
-    func defaultDevice() -> AVCaptureDevice {
-        if let device = AVCaptureDevice.default(AVCaptureDevice.DeviceType.builtInDualCamera,
-                                                for: AVMediaType.video,
-                                                position: AVCaptureDevice.Position.back) {
-            return device // use dual camera on supported devices
-        } else if let device = AVCaptureDevice.default(AVCaptureDevice.DeviceType.builtInWideAngleCamera,
-                                                       for: AVMediaType.video,
-                                                       position: .back) {
-            return device // use default back facing camera otherwise
-        } else {
-            fatalError("All supported devices are expected to have at least one of the queried capture devices.")
-        }
+    @IBAction func snapPhoto(_ sender: Any) {
+        capturePhoto()
     }
+    
     
     func configureCaptureSession(_ completionHandler: ((_ success: Bool) -> Void)) {
         var success = false
@@ -135,7 +163,22 @@ class ViewController: UIViewController {
         
         success = true
     }
-
+    
+    func defaultDevice() -> AVCaptureDevice {
+        if let device = AVCaptureDevice.default(AVCaptureDevice.DeviceType.builtInDualCamera,
+                                                for: AVMediaType.video,
+                                                position: AVCaptureDevice.Position.back) {
+            print("dual cam")
+            return device // use dual camera on supported devices
+        } else if let device = AVCaptureDevice.default(AVCaptureDevice.DeviceType.builtInWideAngleCamera,
+                                                       for: AVMediaType.video,
+                                                       position: .back) {
+            print("wide angle cam")
+            return device // use default back facing camera otherwise
+        } else {
+            fatalError("All supported devices are expected to have at least one of the queried capture devices.")
+        }
+    }
     
     func checkCameraAuthorization(_ completionHandler: @escaping ((_ authorized: Bool) -> Void)) {
         switch AVCaptureDevice.authorizationStatus(for: AVMediaType.video) {
@@ -184,9 +227,150 @@ class ViewController: UIViewController {
             completionHandler(false)
         }
     }
+    
+    
+    func saveRAWPlusJPEGPhotoLibrary(_ rawSampleBuffer: CMSampleBuffer,
+                                     rawPreviewSampleBuffer: CMSampleBuffer?,
+                                     photoSampleBuffer: CMSampleBuffer,
+                                     previewSampleBuffer: CMSampleBuffer?,
+                                     completionHandler: ((_ success: Bool, _ error: Error?) -> Void)?) {
+        self.checkPhotoLibraryAuthorization({ authorized in
+            guard authorized else {
+                print("Permission to access photo library denied.")
+                completionHandler?(false, nil)
+                return
+            }
+            
+            guard let jpegData = AVCapturePhotoOutput.jpegPhotoDataRepresentation(
+                forJPEGSampleBuffer: photoSampleBuffer,
+                previewPhotoSampleBuffer: previewSampleBuffer)
+                else {
+                    print("Unable to create JPEG data.")
+                    completionHandler?(false, nil)
+                    return
+            }
+            
+            guard let dngData = AVCapturePhotoOutput.dngPhotoDataRepresentation(
+                forRawSampleBuffer: rawSampleBuffer,
+                previewPhotoSampleBuffer: rawPreviewSampleBuffer)
+                else {
+                    print("Unable to create DNG data.")
+                    completionHandler?(false, nil)
+                    return
+            }
+            
+            let dngFileURL = self.makeUniqueTempFileURL(typeExtension: "dng")
+            do {
+                try dngData.write(to: dngFileURL, options: [])
+            } catch let error as NSError {
+                print("Unable to write DNG file.")
+                completionHandler?(false, error)
+                return
+            }
+            
+            PHPhotoLibrary.shared().performChanges( {
+                let creationRequest = PHAssetCreationRequest.forAsset()
+                let creationOptions = PHAssetResourceCreationOptions()
+                creationOptions.shouldMoveFile = true
+                creationRequest.addResource(with: .photo, data: jpegData, options: nil)
+                creationRequest.addResource(with: .alternatePhoto, fileURL: dngFileURL, options: creationOptions)
+            }, completionHandler: completionHandler)
+        })
+    }
+ 
 }
 
 
+extension ViewController : AVCapturePhotoCaptureDelegate {
+    
+    
+//    func photoOutput(_ captureOutput: AVCapturePhotoOutput,
+//                     didFinishProcessingPhoto photoSampleBuffer: CMSampleBuffer?,
+//                     previewPhoto previewPhotoSampleBuffer: CMSampleBuffer?,
+//                     resolvedSettings: AVCaptureResolvedPhotoSettings,
+//                     bracketSettings: AVCaptureBracketedStillImageSettings?,
+//                     error: Error?) {
+//        guard error == nil, let photoSampleBuffer = photoSampleBuffer else {
+//            print("Error capturing photo:\(String(describing: error))")
+//            return
+//        }
+//
+//        self.photoSampleBuffer = photoSampleBuffer
+//        self.previewPhotoSampleBuffer = previewPhotoSampleBuffer
+//    }
+    
+//    func photoOutput(_ captureOutput: AVCapturePhotoOutput,
+//                     didFinishProcessingRawPhoto rawSampleBuffer: CMSampleBuffer?,
+//                     previewPhoto previewPhotoSampleBuffer: CMSampleBuffer?,
+//                     resolvedSettings: AVCaptureResolvedPhotoSettings,
+//                     bracketSettings: AVCaptureBracketedStillImageSettings?,
+//                     error: Error?) {
+//        guard error == nil, let rawSampleBuffer = rawSampleBuffer else {
+//            print("Error capturing RAW photo:\(String(describing: error))")
+//            return
+//        }
+//
+//        self.rawSampleBuffer = rawSampleBuffer
+//        self.rawPreviewPhotoSampleBuffer = previewPhotoSampleBuffer
+//
+//        let dngData = rawSampleBuffer.fileDataRepresentation()
+//        let dngFileURL = "test.dng"
+//        do {
+//            try dngData.write(to: dngFileURL, options: [])
+//        } catch let error as NSError {
+//            print("Unable to write DNG file.")
+//            completionHandler?(false, error)
+//            return
+//        }
+//
+//    }
+    
+    func photoOutput(_ output: AVCapturePhotoOutput,
+                didFinishProcessingPhoto photo: AVCapturePhoto,
+                error: Error?) {
+        guard error == nil else {
+            print("Fail to capture photo: \(String(describing: error))")
+            return
+        }
+        guard let dngData = photo.fileDataRepresentation() else {
+            print("Fail to convert pixel buffer")
+            return
+        }
+        let dngFileURL = "test.dng"
+                do {
+                    try dngData.write(to: dngFileURL, options: [])
+                } catch let error as NSError {
+                    print("Unable to write DNG file.")
+                    completionHandler?(false, error)
+                    return
+                }
+    }
+    
+//    func photoOutput(_ captureOutput: AVCapturePhotoOutput,
+//                     didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings,
+//                     error: Error?) {
+//        guard error == nil else {
+//            print("Error in capture process: \(String(describing: error))")
+//            return
+//        }
+//
+//        if let rawSampleBuffer = self.rawSampleBuffer, let photoSampleBuffer = self.photoSampleBuffer {
+//
+//            saveRAWPlusJPEGPhotoLibrary(rawSampleBuffer,
+//                                        rawPreviewSampleBuffer: self.rawPreviewPhotoSampleBuffer,
+//                                        photoSampleBuffer: photoSampleBuffer,
+//                                        previewSampleBuffer: self.previewPhotoSampleBuffer,
+//                                        completionHandler: { success, error in
+//
+//                    if success {
+//                        print("Added RAW+JPEG photo to library.")
+//                    } else {
+//                        print("Error adding RAW+JPEG photo to library: \(String(describing: error))")
+//                    }
+//            })
+//        }
+//    }
+}
 
 
 
