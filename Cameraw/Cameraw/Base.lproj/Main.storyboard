@@ -4,7 +4,7 @@
         <adaptation id="fullscreen"/>
     </device>
     <dependencies>
-        <deployment identifier="iOS"/>
+        <deployment version="4352" identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="13772"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
@@ -17,12 +17,72 @@
                     <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="XmL-Pi-LG8" userLabel="Preview" customClass="PreviewView" customModule="Cameraw" customModuleProvider="target">
+                                <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <connections>
+                                    <outletCollection property="gestureRecognizers" destination="bvh-M9-YQq" appends="YES" id="YJO-9x-DNj"/>
+                                </connections>
+                            </view>
+                            <label hidden="YES" opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="sCA-u9-hAK" userLabel="ISO">
+                                <rect key="frame" x="166" y="30" width="42" height="20.5"/>
+                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.29999999999999999" colorSpace="custom" customColorSpace="sRGB"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" red="1" green="0.14913141730000001" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <label hidden="YES" opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="ktG-bt-NT4" userLabel="Exp">
+                                <rect key="frame" x="166.5" y="60" width="42" height="20.5"/>
+                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.29999999999999999" colorSpace="custom" customColorSpace="sRGB"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" red="1" green="0.14913141730000001" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="huQ-sh-buf">
+                                <rect key="frame" x="147.5" y="617" width="80" height="30"/>
+                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.29999999999999999" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="30" id="2dh-Hy-ycp"/>
+                                    <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="80" id="hKx-Yq-th2"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="system" pointSize="20"/>
+                                <state key="normal" title="Photo">
+                                    <color key="titleShadowColor" red="0.61771412640000001" green="0.62383010790000004" blue="0.62383010790000004" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                </state>
+                            </button>
+                        </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-                        <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
+                        <constraints>
+                            <constraint firstItem="sCA-u9-hAK" firstAttribute="centerX" secondItem="Fry-kP-KsL" secondAttribute="centerX" id="0cS-Wh-jgq"/>
+                            <constraint firstItem="XmL-Pi-LG8" firstAttribute="trailing" secondItem="Fry-kP-KsL" secondAttribute="trailing" id="44g-wK-ZUX"/>
+                            <constraint firstItem="ktG-bt-NT4" firstAttribute="top" secondItem="sCA-u9-hAK" secondAttribute="top" constant="30" id="7xI-97-wnB"/>
+                            <constraint firstItem="ktG-bt-NT4" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="Lct-oA-b18"/>
+                            <constraint firstItem="Fry-kP-KsL" firstAttribute="centerX" secondItem="huQ-sh-buf" secondAttribute="centerX" id="USC-PT-NSW"/>
+                            <constraint firstItem="XmL-Pi-LG8" firstAttribute="leading" secondItem="Fry-kP-KsL" secondAttribute="leading" id="kqW-pE-A6d"/>
+                            <constraint firstItem="sCA-u9-hAK" firstAttribute="top" secondItem="8bC-Xf-vdC" secondAttribute="top" constant="30" id="n3m-Qt-msM"/>
+                            <constraint firstItem="XmL-Pi-LG8" firstAttribute="bottom" secondItem="8bC-Xf-vdC" secondAttribute="bottom" id="yV6-bO-H9b"/>
+                            <constraint firstItem="Fry-kP-KsL" firstAttribute="bottom" secondItem="huQ-sh-buf" secondAttribute="bottom" constant="20" id="yaj-pa-MiR"/>
+                            <constraint firstItem="XmL-Pi-LG8" firstAttribute="centerY" secondItem="8bC-Xf-vdC" secondAttribute="centerY" id="zDb-n0-tiP"/>
+                        </constraints>
+                        <viewLayoutGuide key="safeArea" id="Fry-kP-KsL"/>
                     </view>
+                    <connections>
+                        <outlet property="expLabel" destination="ktG-bt-NT4" id="lFb-NY-RGj"/>
+                        <outlet property="isoLabel" destination="sCA-u9-hAK" id="4Rs-lz-2dr"/>
+                        <outlet property="photoButton" destination="huQ-sh-buf" id="xfx-9v-wPO"/>
+                        <outlet property="previewView" destination="XmL-Pi-LG8" id="x2S-xK-VFQ"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
+                <tapGestureRecognizer id="bvh-M9-YQq">
+                    <connections>
+                        <action selector="focusAndExposeTap:" destination="BYZ-38-t0r" id="92M-Ew-Q95"/>
+                    </connections>
+                </tapGestureRecognizer>
             </objects>
+            <point key="canvasLocation" x="37.600000000000001" y="33.733133433283363"/>
         </scene>
     </scenes>
+    <color key="tintColor" red="1" green="0.14913141730000001" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
 </document>
