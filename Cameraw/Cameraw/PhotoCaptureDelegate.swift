@@ -44,9 +44,6 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
         if let error = error {
             print("Fail to capture photo: \(error)")
         } else {
-            
-            print("Outputing")
-            
 //            var metadataAttachments: Dictionary = photo.metadata as Dictionary
 //            
 //            print(photo.metadata[kCGImagePropertyDNGLensInfo as String])

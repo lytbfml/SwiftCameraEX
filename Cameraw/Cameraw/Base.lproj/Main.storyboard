@@ -58,7 +58,7 @@
                                 <color key="textColor" red="1" green="0.14913141730000001" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="huQ-sh-buf">
+                            <button opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="huQ-sh-buf">
                                 <rect key="frame" x="162.5" y="597" width="50" height="50"/>
                                 <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <constraints>
@@ -73,6 +73,17 @@
                                     <action selector="capturePhoto:" destination="BYZ-38-t0r" eventType="touchUpInside" id="j92-6p-9XR"/>
                                 </connections>
                             </button>
+                            <button opaque="NO" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="erZ-sO-2KZ" userLabel="InputToogle">
+                                <rect key="frame" x="52.5" y="597" width="60" height="20"/>
+                                <color key="backgroundColor" red="0.75406885150000003" green="0.75408679249999999" blue="0.75407713649999997" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="60" id="0hB-CR-Btg"/>
+                                </constraints>
+                                <state key="normal" title="Toggle"/>
+                                <connections>
+                                    <action selector="inputToggle:" destination="BYZ-38-t0r" eventType="touchUpInside" id="ixu-6U-ftR"/>
+                                </connections>
+                            </button>
                         </subviews>
                         <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
@@ -85,6 +96,8 @@
                             <constraint firstItem="fp1-Kp-Qlf" firstAttribute="trailing" secondItem="sCA-u9-hAK" secondAttribute="centerX" constant="-60" id="RC0-xi-xhf"/>
                             <constraint firstItem="Fry-kP-KsL" firstAttribute="centerX" secondItem="huQ-sh-buf" secondAttribute="centerX" id="USC-PT-NSW"/>
                             <constraint firstItem="myr-GE-qmH" firstAttribute="leading" secondItem="sCA-u9-hAK" secondAttribute="centerX" constant="60" id="V2f-89-5jS"/>
+                            <constraint firstItem="huQ-sh-buf" firstAttribute="top" secondItem="erZ-sO-2KZ" secondAttribute="top" id="asy-qC-S88"/>
+                            <constraint firstItem="erZ-sO-2KZ" firstAttribute="trailing" secondItem="huQ-sh-buf" secondAttribute="leading" constant="-50" id="js7-eL-ZPi"/>
                             <constraint firstItem="XmL-Pi-LG8" firstAttribute="leading" secondItem="Fry-kP-KsL" secondAttribute="leading" id="kqW-pE-A6d"/>
                             <constraint firstItem="sCA-u9-hAK" firstAttribute="top" secondItem="8bC-Xf-vdC" secondAttribute="top" constant="30" id="n3m-Qt-msM"/>
                             <constraint firstItem="XmL-Pi-LG8" firstAttribute="bottom" secondItem="8bC-Xf-vdC" secondAttribute="bottom" id="yV6-bO-H9b"/>
@@ -96,6 +109,7 @@
                     <connections>
                         <outlet property="expIn" destination="myr-GE-qmH" id="pYI-27-NcE"/>
                         <outlet property="expLabel" destination="ktG-bt-NT4" id="lFb-NY-RGj"/>
+                        <outlet property="inputToggleBtn" destination="erZ-sO-2KZ" id="eML-UO-Q3p"/>
                         <outlet property="isoIn" destination="fp1-Kp-Qlf" id="dgj-np-7Qh"/>
                         <outlet property="isoLabel" destination="sCA-u9-hAK" id="4Rs-lz-2dr"/>
                         <outlet property="photoButton" destination="huQ-sh-buf" id="xfx-9v-wPO"/>

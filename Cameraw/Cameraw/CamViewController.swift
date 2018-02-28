@@ -12,47 +12,64 @@ import Photos
 
 class CamViewController: UIViewController {
     
+    var count = 0
+    var photo_num = 1
     
-    var count = 0;
+    private let ISO_VAL_100 : Float = 100
+    private let ISO_VAL_200 : Float = 200
+    private let ISO_VAL_1000 : Float = 1000
     
+    private let EXP_1_10 : Float64 = 0.1
+    private let EXP_1_50 : Float64 = 0.02
+    private let EXP_1_200 : Float64 = 0.005
     
-    // View Controller Life Cycle
-
+    private let photoOutput = AVCapturePhotoOutput()
+    
+    private var inProgressPhotoCaptureDelegates = [Int64: PhotoCaptureProcessor]()
+    
+    @IBOutlet weak var isoLabel: UILabel!
+    @IBOutlet weak var expLabel: UILabel!
+    
+    @IBOutlet weak var isoIn: UITextField!
+    @IBOutlet weak var expIn: UITextField!
+    
+    @IBOutlet weak var inputToggleBtn: UIButton!
+    @IBAction func inputToggle(_ inputToggleBtn: UIButton) {
+        if(isoIn.isHidden) {
+            isoIn.isHidden = false
+            expIn.isHidden = false
+        } else {
+            isoIn.isHidden = true
+            expIn.isHidden = true
+        }
+        
+    }
+    @IBOutlet weak var photoButton: UIButton!
+    @IBAction func capturePhoto(_ photoButton: UIButton) {
+        self.takePhoto()
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        photoButton.isEnabled = false
         previewView.session = session
         
-        photoButton.layer.shadowColor = UIColor.black.cgColor
-        photoButton.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
-        photoButton.layer.masksToBounds = false
-        photoButton.layer.shadowRadius = 1.0
-        photoButton.layer.shadowOpacity = 0.5
-        photoButton.layer.cornerRadius = photoButton.frame.width / 2
-        photoButton.clipsToBounds = true
-
-        
         switch AVCaptureDevice.authorizationStatus(for: .video) {
-            case .authorized:
-                // The user has previously granted access to the camera.
-                break
-            case .notDetermined:
-                sessionQueue.suspend()
-                AVCaptureDevice.requestAccess(for: .video, completionHandler: { granted in
-                    if !granted {
-                        self.setupResult = .notAuthorized
-                    }
-                    self.sessionQueue.resume()
-                })
-            default:
-                // The user has previously denied access.
-                setupResult = .notAuthorized
+        case .authorized:
+            break
+        case .notDetermined:
+            sessionQueue.suspend()
+            AVCaptureDevice.requestAccess(for: .video, completionHandler: { granted in
+                if !granted {
+                    self.setupResult = .notAuthorized
+                }
+                self.sessionQueue.resume()
+            })
+        default:
+            setupResult = .notAuthorized
         }
         sessionQueue.async {
             self.configureSession()
-            //MARK: TODO
-            self.setExposureDurationAndISO(time: 0.02, isoVal: 100)
         }
     }
     
@@ -62,7 +79,6 @@ class CamViewController: UIViewController {
         sessionQueue.async {
             switch self.setupResult {
             case .success:
-                // Only setup observers and start the session running if setup succeeded.
                 self.addObservers()
                 self.session.startRunning()
                 self.isSessionRunning = self.session.isRunning
@@ -113,13 +129,10 @@ class CamViewController: UIViewController {
         
         super.viewWillDisappear(animated)
     }
-
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
     }
-    
-    // MARK: Session Management
     
     private enum SessionSetupResult {
         case success
@@ -131,7 +144,6 @@ class CamViewController: UIViewController {
     
     private var isSessionRunning = false
     
-    // Communicate with the session and other session objects on this queue.
     private let sessionQueue = DispatchQueue(label: "session queue")
     
     private var setupResult: SessionSetupResult = .success
@@ -140,17 +152,14 @@ class CamViewController: UIViewController {
     
     @IBOutlet weak var previewView: PreviewView!
     
-    // Call this on the session queue.
     private func configureSession() {
         if setupResult != .success {
             return
         }
         
         session.beginConfiguration()
-        // AVCaptureSession.Preset.photo
         session.sessionPreset = .photo
         
-        // Add video input
         let defaultVideoDevice = defaultDevice()
         guard let videoInput = try? AVCaptureDeviceInput(device: defaultVideoDevice) else {
             print("Unable to obtain video input for default camera.")
@@ -161,26 +170,26 @@ class CamViewController: UIViewController {
             session.addInput(videoInput)
             self.videoDeviceInput = videoInput
             
-//            DispatchQueue.main.async {
-//                /*
-//                 Why are we dispatching this to the main queue?
-//                 Because AVCaptureVideoPreviewLayer is the backing layer for PreviewView and UIView
-//                 can only be manipulated on the main thread.
-//                 Note: As an exception to the above rule, it is not necessary to serialize video orientation changes
-//                 on the AVCaptureVideoPreviewLayer’s connection with other session manipulation.
-//
-//                 Use the status bar orientation as the initial video orientation. Subsequent orientation changes are
-//                 handled by CameraViewController.viewWillTransition(to:with:).
-//                 */
-//                let statusBarOrientation = UIApplication.shared.statusBarOrientation
-//                var initialVideoOrientation: AVCaptureVideoOrientation = .portrait
-//                if statusBarOrientation != .unknown {
-//                    if let videoOrientation = AVCaptureVideoOrientation(interfaceOrientation: statusBarOrientation) {
-//                        initialVideoOrientation = videoOrientation
-//                    }
-//                }
-//                self.previewView.videoPreviewLayer.connection?.videoOrientation = initialVideoOrientation
-//            }
+            //            DispatchQueue.main.async {
+            //                /*
+            //                 Why are we dispatching this to the main queue?
+            //                 Because AVCaptureVideoPreviewLayer is the backing layer for PreviewView and UIView
+            //                 can only be manipulated on the main thread.
+            //                 Note: As an exception to the above rule, it is not necessary to serialize video orientation changes
+            //                 on the AVCaptureVideoPreviewLayer’s connection with other session manipulation.
+            //
+            //                 Use the status bar orientation as the initial video orientation. Subsequent orientation changes are
+            //                 handled by CameraViewController.viewWillTransition(to:with:).
+            //                 */
+            //                let statusBarOrientation = UIApplication.shared.statusBarOrientation
+            //                var initialVideoOrientation: AVCaptureVideoOrientation = .portrait
+            //                if statusBarOrientation != .unknown {
+            //                    if let videoOrientation = AVCaptureVideoOrientation(interfaceOrientation: statusBarOrientation) {
+            //                        initialVideoOrientation = videoOrientation
+            //                    }
+            //                }
+            //                self.previewView.videoPreviewLayer.connection?.videoOrientation = initialVideoOrientation
+            //            }
         } else {
             print("Could not add video device input to the session")
             setupResult = .configurationFailed
@@ -191,12 +200,7 @@ class CamViewController: UIViewController {
         // Add photo output.
         if session.canAddOutput(photoOutput) {
             session.addOutput(photoOutput)
-            
             photoOutput.isHighResolutionCaptureEnabled = true
-            
-            print("configureSession - isDepthDataDeliveryEnabled: \(photoOutput.isDepthDataDeliveryEnabled)")
-            print("configureSession - Max Bracketed: \(photoOutput.maxBracketedCapturePhotoCount)")
-            
         } else {
             print("Could not add photo output to the session")
             setupResult = .configurationFailed
@@ -223,27 +227,46 @@ class CamViewController: UIViewController {
         }
     }
     
-    // Device Configuration
-    
-    @IBOutlet weak var isoLabel: UILabel!
-    @IBOutlet weak var expLabel: UILabel!
-    
+    private func UIConfig() {
+        photoButton.isEnabled = false
+        photoButton.layer.shadowColor = UIColor.black.cgColor
+        photoButton.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
+        photoButton.layer.masksToBounds = false
+        photoButton.layer.shadowRadius = 1.0
+        photoButton.layer.shadowOpacity = 0.5
+        photoButton.layer.cornerRadius = photoButton.frame.width / 4
+        
+        inputToggleBtn.layer.shadowColor = UIColor.black.cgColor
+        inputToggleBtn.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
+        inputToggleBtn.layer.masksToBounds = false
+        inputToggleBtn.layer.shadowRadius = 1.0
+        inputToggleBtn.layer.shadowOpacity = 0.5
+        inputToggleBtn.layer.cornerRadius = inputToggleBtn.frame.width / 4
+        
+        isoIn.isHidden = true
+        expIn.isHidden = true
+        
+        expIn.text = nil
+        expIn.placeholder = "Exp"
+        isoIn.text = nil
+        isoIn.placeholder = "Iso"
+    }
     
     @IBAction private func focusAndExposeTap(_ gestureRecognizer: UITapGestureRecognizer) {
         let devicePoint = previewView.videoPreviewLayer.captureDevicePointConverted(fromLayerPoint: gestureRecognizer.location(in: gestureRecognizer.view))
         focus(with: .autoFocus, exposureMode: .autoExpose, at: devicePoint, monitorSubjectAreaChange: true)
+        DispatchQueue.main.async {
+            self.photoButton.isEnabled = false
+        }
     }
     
     private func focus(with focusMode: AVCaptureDevice.FocusMode, exposureMode: AVCaptureDevice.ExposureMode, at devicePoint: CGPoint, monitorSubjectAreaChange: Bool) {
         sessionQueue.async {
+            
             let device = self.videoDeviceInput.device
             do {
                 try device.lockForConfiguration()
                 
-                /*
-                 Setting (focus/exposure)PointOfInterest alone does not initiate a (focus/exposure) operation.
-                 Call set(Focus/Exposure)Mode() to apply the new point of interest.
-                 */
                 if device.isFocusPointOfInterestSupported && device.isFocusModeSupported(focusMode) {
                     device.focusPointOfInterest = devicePoint
                     device.focusMode = focusMode
@@ -259,15 +282,14 @@ class CamViewController: UIViewController {
                 
                 let exp = device.exposureDuration
                 let iso = device.iso
-                let expValInt = Int(1 / CMTimeGetSeconds(device.exposureDuration))
-                print("focus - ISO: \(iso)")
-                print("focus - ExpVal: \(expValInt)")
-                print("focus - expCMTime: \(exp)\n")
+                let expValInt = Int(1 / CMTimeGetSeconds(exp))
+              
                 DispatchQueue.main.async {
                     self.isoLabel.text = String(iso)
                     self.expLabel.text = "1/" + String(expValInt)
                     self.isoLabel.isHidden = false
                     self.expLabel.isHidden = false
+                    self.photoButton.isEnabled = true
                 }
             } catch {
                 print("Could not lock device for configuration: \(error)")
@@ -275,35 +297,19 @@ class CamViewController: UIViewController {
         }
     }
     
-    private let photoOutput = AVCapturePhotoOutput()
-    
-    private var inProgressPhotoCaptureDelegates = [Int64: PhotoCaptureProcessor]()
-    
-    @IBOutlet weak var isoIn: UITextField!
-    @IBOutlet weak var expIn: UITextField!
-    
-    @IBOutlet weak var photoButton: UIButton!
-    @IBAction func capturePhoto(_ photoButton: UIButton) {
-        self.takePhoto()
-    }
     
     private func takePhoto()
     {
         sessionQueue.async {
             
             let device = self.videoDeviceInput.device
-            
-            self.printISOnEXP(dev: device);
-            
-            // Photo settings for RAW capture.
+            self.printSettings(dev: device);
             let rawFormatType = kCVPixelFormatType_14Bayer_RGGB
             
-            // At this point the array should not be empty (session has been configured).
             guard self.photoOutput.availableRawPhotoPixelFormatTypes.contains(NSNumber(value: rawFormatType).uint32Value) else {
                 print("No available RAW pixel formats")
                 return
             }
-            //guard let availableRawFormat = self.photoOutput.availableRawPhotoPixelFormatTypes.first else { return }
             
             let photoSettings = AVCapturePhotoSettings(rawPixelFormatType: rawFormatType)
             
@@ -312,38 +318,28 @@ class CamViewController: UIViewController {
             photoSettings.isAutoStillImageStabilizationEnabled = false
             photoSettings.isHighResolutionPhotoEnabled = true
             
-            print("takePhoto - photoSettings.isAutoStillImageStabilizationEnabled: \(photoSettings.isAutoStillImageStabilizationEnabled)")
-            print("takePhoto - device.exposureMode: \(device.exposureMode.rawValue)\n")
-            
             let photoCaptureProcessor = PhotoCaptureProcessor(with: photoSettings, willCapturePhotoAnimation: {
-                DispatchQueue.main.async {
-                    self.previewView.videoPreviewLayer.opacity = 0
-                    UIView.animate(withDuration: 0.25) {
-                        self.previewView.videoPreviewLayer.opacity = 1
-                    }
-                }
+                // MARK: willCapturePhotoAnimation
+//                DispatchQueue.main.async {
+//                    self.previewView.videoPreviewLayer.opacity = 0
+//                    UIView.animate(withDuration: 0.25) {
+//                        self.previewView.videoPreviewLayer.opacity = 1
+//                    }
+//                }
             }, completionHandler: { photoCaptureProcessor in
-                // When the capture is complete, remove a reference to the photo capture delegate so it can be deallocated.
                 self.sessionQueue.async {
                     self.inProgressPhotoCaptureDelegates[photoCaptureProcessor.requestedPhotoSettings.uniqueID] = nil
                     
                     //MARK: repeat capture
-                    self.count = self.count+1;
-                    if(self.count < 5)
-                    {
-                        self.takePhoto();
-                    }
+                    self.count = self.count+1
+                    
+                    self.captureNinePreset()
                 }
             })
             
-            /*
-             The Photo Output keeps a weak reference to the photo capture delegate so
-             we store it in an array to maintain a strong reference to this object
-             until the capture is completed.
-             */
             self.inProgressPhotoCaptureDelegates[photoCaptureProcessor.requestedPhotoSettings.uniqueID] = photoCaptureProcessor
             self.photoOutput.capturePhoto(with: photoSettings, delegate: photoCaptureProcessor)
-
+            
         }
     }
     
@@ -353,14 +349,9 @@ class CamViewController: UIViewController {
     private func addObservers() {
         let keyValueObservation = session.observe(\.isRunning, options: .new) { _, change in
             guard let isSessionRunning = change.newValue else { return }
-//            let isLivePhotoCaptureSupported = self.photoOutput.isLivePhotoCaptureSupported
-//            let isLivePhotoCaptureEnabled = self.photoOutput.isLivePhotoCaptureEnabled
-//            let isDepthDeliveryDataSupported = self.photoOutput.isDepthDataDeliverySupported
-//            let isDepthDeliveryDataEnabled = self.photoOutput.isDepthDataDeliveryEnabled
             
             DispatchQueue.main.async {
                 self.photoButton.isEnabled = isSessionRunning
-                
             }
         }
         keyValueObservations.append(keyValueObservation)
@@ -400,37 +391,19 @@ class CamViewController: UIViewController {
         
         print("Capture session runtime error: \(error)")
         
-        /*
-         Automatically try to restart the session running if media services were
-         reset and the last start running succeeded. Otherwise, enable the user
-         to try to resume the session running.
-         */
         if error.code == .mediaServicesWereReset {
             sessionQueue.async {
                 if self.isSessionRunning {
                     self.session.startRunning()
                     self.isSessionRunning = self.session.isRunning
-                } else {
-                    DispatchQueue.main.async {
-//                        self.resumeButton.isHidden = false
-                    }
                 }
             }
-        } else {
-//            resumeButton.isHidden = false
         }
     }
     
     @objc
     func sessionWasInterrupted(notification: NSNotification) {
-        /*
-         In some scenarios we want to enable the user to resume the session running.
-         For example, if music playback is initiated via control center while
-         using AVCam, then the user can let AVCam resume
-         the session running, which will stop music playback. Note that stopping
-         music playback in control center will not automatically resume the session
-         running. Also note that it is not always possible to resume, see `resumeInterruptedSession(_:)`.
-         */
+        
         if let userInfoValue = notification.userInfo?[AVCaptureSessionInterruptionReasonKey] as AnyObject?,
             let reasonIntegerValue = userInfoValue.integerValue,
             let reason = AVCaptureSession.InterruptionReason(rawValue: reasonIntegerValue) {
@@ -445,9 +418,9 @@ class CamViewController: UIViewController {
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool
     {
-//        let allowedCharacters = CharacterSet.decimalDigits
-//        let characterSet = CharacterSet(charactersIn: string)
-//        return allowedCharacters.isSuperset(of: characterSet)
+        //        let allowedCharacters = CharacterSet.decimalDigits
+        //        let characterSet = CharacterSet(charactersIn: string)
+        //        return allowedCharacters.isSuperset(of: characterSet)
         
         let characterSet = CharacterSet(charactersIn: string)
         let boolIsNumber = CharacterSet.decimalDigits.isSuperset(of: characterSet)
@@ -471,48 +444,102 @@ class CamViewController: UIViewController {
         }
     }
     
+    //------------------------------------------------------------------------------------------------------------------------------
+    //---------------------------------------------------Helper Method--------------------------------------------------------------
+    //------------------------------------------------------------------------------------------------------------------------------
+
     
-    //--------------------------------------------Helper Method-----------------------------------------------------
-    
-    
-    private func setExposureDurationAndISO(time: Float64, isoVal: Float) {
+    private func takePhotoWithBothSet(time: Float64, isoVal: Float) {
         do {
             try self.videoDeviceInput.device.lockForConfiguration()
-            self.videoDeviceInput.device.setExposureModeCustom(duration: CMTimeMakeWithSeconds(time, 1000*1000*1000), iso: isoVal, completionHandler: nil)
+            self.videoDeviceInput.device.setExposureModeCustom(duration: CMTimeMakeWithSeconds(time, 1000*1000*1000), iso: isoVal, completionHandler: { (time) -> Void in
+                self.takePhoto()
+            })
             self.videoDeviceInput.device.unlockForConfiguration()
         } catch let error {
             NSLog("Could not lock device for configuration: \(error)")
         }
     }
     
-    private func setExposureDuration(time: Float64) {
+    private func takePhotoWithExpSet(time: Float64) {
         do {
             try self.videoDeviceInput.device.lockForConfiguration()
-            self.videoDeviceInput.device.setExposureModeCustom(duration: CMTimeMakeWithSeconds(time, 1000*1000*1000), iso: AVCaptureDevice.currentISO, completionHandler: nil)
+            self.videoDeviceInput.device.setExposureModeCustom(duration: CMTimeMakeWithSeconds(time, 1000*1000*1000), iso: AVCaptureDevice.currentISO, completionHandler: { (time) -> Void in
+                self.takePhoto()
+            })
             self.videoDeviceInput.device.unlockForConfiguration()
         } catch let error {
             NSLog("Could not lock device for configuration: \(error)")
         }
     }
     
-    private func setISO(isoVal: Float) {
-        do {
-            try self.videoDeviceInput.device.lockForConfiguration()
-            self.videoDeviceInput.device.setExposureModeCustom(duration: AVCaptureDevice.currentExposureDuration, iso: isoVal, completionHandler: nil)
-            self.videoDeviceInput.device.unlockForConfiguration()
-        } catch let error {
-            NSLog("Could not lock device for configuration: \(error)")
+    private func takePotoWithIsoSet(isoVal: Float) {
+        let devISO = getCurrentISO(dev: self.videoDeviceInput.device)
+        print("SetISO - deviso: \(devISO), setting iso: \(isoVal)")
+        if(devISO == isoVal) {
+            return
+        }
+        else {
+            do {
+                try self.videoDeviceInput.device.lockForConfiguration()
+                self.videoDeviceInput.device.setExposureModeCustom(duration: AVCaptureDevice.currentExposureDuration, iso: isoVal, completionHandler: { (time) -> Void in
+                    self.takePhoto()
+                })
+                self.videoDeviceInput.device.unlockForConfiguration()
+            } catch let error {
+                NSLog("Could not lock device for configuration: \(error)")
+            }
         }
     }
     
-    private func printISOnEXP(dev: AVCaptureDevice)
-    {
+    private func getCurrentISO(dev: AVCaptureDevice) -> Float {
+        return dev.iso
+    }
+    
+    private func printSettings(dev: AVCaptureDevice) {
         let exp = dev.exposureDuration
         let iso = dev.iso
         let expValInt = Int(1 / CMTimeGetSeconds(dev.exposureDuration))
-        print("takePhoto - ISO: \(iso)")
-        print("takePhoto - ExpVal: \(expValInt)")
-        print("takePhoto - expCMTime: \(exp)\n")
+        print("printSettings - ISO: \(iso)")
+        print("printSettings - ExpVal: \(expValInt)")
+        print("printSettings - expCMTime: \(exp)")
+        print("printSettings - device.exposureMode: \(dev.exposureMode.rawValue) (locked = 0, autoExpose = 1, continuousAutoExposure = 2, custom = 3)")
+    }
+    
+    
+    private func captureNinePreset() {
+        print("captureNinePreset - Counter: \(count)\n\n")
+        
+        if(self.count < self.photo_num) {
+            self.takePhoto();
+        }
+        else if(self.count >= (self.photo_num * 1) && self.count < (self.photo_num * 2)) {
+            takePhotoWithBothSet(time: EXP_1_10, isoVal: ISO_VAL_100)
+        }
+        else if(self.count >= (self.photo_num * 2) && self.count < (self.photo_num * 3)) {
+            takePotoWithIsoSet(isoVal: ISO_VAL_200)
+        }
+        else if(self.count >= (self.photo_num * 3) && self.count < (self.photo_num * 4)) {
+            takePotoWithIsoSet(isoVal: ISO_VAL_1000)
+        }
+        else if(self.count >= (self.photo_num * 4) && self.count < (self.photo_num * 5)) {
+            takePhotoWithBothSet(time: EXP_1_50, isoVal: ISO_VAL_100)
+        }
+        else if(self.count >= (self.photo_num * 5) && self.count < (self.photo_num * 6)) {
+            takePotoWithIsoSet(isoVal: ISO_VAL_200)
+        }
+        else if(self.count >= (self.photo_num * 6) && self.count < (self.photo_num * 7)) {
+            takePotoWithIsoSet(isoVal: ISO_VAL_1000)
+        }
+        else if(self.count >= (self.photo_num * 7) && self.count < (self.photo_num * 8)) {
+            takePhotoWithBothSet(time: EXP_1_200, isoVal: ISO_VAL_100)
+        }
+        else if(self.count >= (self.photo_num * 8) && self.count < (self.photo_num * 9)) {
+            takePotoWithIsoSet(isoVal: ISO_VAL_200)
+        }
+        else if(self.count >= (self.photo_num * 9) && self.count < (self.photo_num * 10)) {
+            takePotoWithIsoSet(isoVal: ISO_VAL_1000)
+        }
     }
     
 }
