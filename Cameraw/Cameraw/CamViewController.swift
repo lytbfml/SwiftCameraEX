@@ -13,7 +13,7 @@ import Photos
 class CamViewController: UIViewController {
     
     var count = 0
-    var photo_num = 1
+    var photo_num = 10
     
     private let ISO_VAL_100 : Float = 100
     private let ISO_VAL_200 : Float = 200
@@ -52,7 +52,9 @@ class CamViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        UIConfig()
         previewView.session = session
+        
         
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
@@ -241,7 +243,7 @@ class CamViewController: UIViewController {
         inputToggleBtn.layer.masksToBounds = false
         inputToggleBtn.layer.shadowRadius = 1.0
         inputToggleBtn.layer.shadowOpacity = 0.5
-        inputToggleBtn.layer.cornerRadius = inputToggleBtn.frame.width / 4
+        inputToggleBtn.layer.cornerRadius = inputToggleBtn.frame.width / 6
         
         isoIn.isHidden = true
         expIn.isHidden = true
@@ -476,19 +478,14 @@ class CamViewController: UIViewController {
     private func takePotoWithIsoSet(isoVal: Float) {
         let devISO = getCurrentISO(dev: self.videoDeviceInput.device)
         print("SetISO - deviso: \(devISO), setting iso: \(isoVal)")
-        if(devISO == isoVal) {
-            return
-        }
-        else {
-            do {
-                try self.videoDeviceInput.device.lockForConfiguration()
-                self.videoDeviceInput.device.setExposureModeCustom(duration: AVCaptureDevice.currentExposureDuration, iso: isoVal, completionHandler: { (time) -> Void in
-                    self.takePhoto()
-                })
-                self.videoDeviceInput.device.unlockForConfiguration()
-            } catch let error {
-                NSLog("Could not lock device for configuration: \(error)")
-            }
+        do {
+            try self.videoDeviceInput.device.lockForConfiguration()
+            self.videoDeviceInput.device.setExposureModeCustom(duration: AVCaptureDevice.currentExposureDuration, iso: isoVal, completionHandler: { (time) -> Void in
+                self.takePhoto()
+            })
+            self.videoDeviceInput.device.unlockForConfiguration()
+        } catch let error {
+            NSLog("Could not lock device for configuration: \(error)")
         }
     }
     
@@ -513,32 +510,59 @@ class CamViewController: UIViewController {
         if(self.count < self.photo_num) {
             self.takePhoto();
         }
-        else if(self.count >= (self.photo_num * 1) && self.count < (self.photo_num * 2)) {
+        else if(self.count == (self.photo_num * 1)) {
             takePhotoWithBothSet(time: EXP_1_10, isoVal: ISO_VAL_100)
         }
-        else if(self.count >= (self.photo_num * 2) && self.count < (self.photo_num * 3)) {
+        else if(self.count > (self.photo_num * 1) && self.count < (self.photo_num * 2)) {
+            takePhoto()
+        }
+        else if(self.count == (self.photo_num * 2)) {
             takePotoWithIsoSet(isoVal: ISO_VAL_200)
         }
-        else if(self.count >= (self.photo_num * 3) && self.count < (self.photo_num * 4)) {
+        else if(self.count > (self.photo_num * 2) && self.count < (self.photo_num * 3)) {
+            takePhoto()
+        }
+        else if(self.count == (self.photo_num * 3)) {
             takePotoWithIsoSet(isoVal: ISO_VAL_1000)
         }
-        else if(self.count >= (self.photo_num * 4) && self.count < (self.photo_num * 5)) {
+        else if(self.count > (self.photo_num * 3) && self.count < (self.photo_num * 4)) {
+            takePhoto()
+        }
+        else if(self.count == (self.photo_num * 4)) {
             takePhotoWithBothSet(time: EXP_1_50, isoVal: ISO_VAL_100)
         }
-        else if(self.count >= (self.photo_num * 5) && self.count < (self.photo_num * 6)) {
+        else if(self.count > (self.photo_num * 4) && self.count < (self.photo_num * 5)) {
+            takePhoto()
+        }
+        else if(self.count == (self.photo_num * 5)) {
             takePotoWithIsoSet(isoVal: ISO_VAL_200)
         }
-        else if(self.count >= (self.photo_num * 6) && self.count < (self.photo_num * 7)) {
+        else if(self.count > (self.photo_num * 5) && self.count < (self.photo_num * 6)) {
+            takePhoto()
+        }
+        else if(self.count == (self.photo_num * 6)) {
             takePotoWithIsoSet(isoVal: ISO_VAL_1000)
         }
-        else if(self.count >= (self.photo_num * 7) && self.count < (self.photo_num * 8)) {
+        else if(self.count > (self.photo_num * 6) && self.count < (self.photo_num * 7)) {
+            takePhoto()
+        }
+        else if(self.count == (self.photo_num * 7)) {
             takePhotoWithBothSet(time: EXP_1_200, isoVal: ISO_VAL_100)
         }
-        else if(self.count >= (self.photo_num * 8) && self.count < (self.photo_num * 9)) {
+        else if(self.count > (self.photo_num * 7) && self.count < (self.photo_num * 8)) {
+            takePhoto()
+        }
+        else if(self.count == (self.photo_num * 8)) {
             takePotoWithIsoSet(isoVal: ISO_VAL_200)
         }
-        else if(self.count >= (self.photo_num * 9) && self.count < (self.photo_num * 10)) {
+        else if(self.count > (self.photo_num * 8) && self.count < (self.photo_num * 9)) {
+            takePhoto()
+        }
+        else if(self.count == (self.photo_num * 9)) {
             takePotoWithIsoSet(isoVal: ISO_VAL_1000)
+        }
+        else if(self.count > (self.photo_num * 9) && self.count < (self.photo_num * 10)) {
+            takePhoto()
         }
     }
     

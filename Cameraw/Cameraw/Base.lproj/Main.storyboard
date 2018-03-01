@@ -73,11 +73,12 @@
                                     <action selector="capturePhoto:" destination="BYZ-38-t0r" eventType="touchUpInside" id="j92-6p-9XR"/>
                                 </connections>
                             </button>
-                            <button opaque="NO" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="erZ-sO-2KZ" userLabel="InputToogle">
-                                <rect key="frame" x="52.5" y="597" width="60" height="20"/>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="erZ-sO-2KZ" userLabel="InputToogle">
+                                <rect key="frame" x="57.5" y="597" width="60" height="20"/>
                                 <color key="backgroundColor" red="0.75406885150000003" green="0.75408679249999999" blue="0.75407713649999997" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <constraints>
                                     <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="60" id="0hB-CR-Btg"/>
+                                    <constraint firstAttribute="height" constant="20" id="j7n-HR-PeE"/>
                                 </constraints>
                                 <state key="normal" title="Toggle"/>
                                 <connections>
@@ -97,7 +98,7 @@
                             <constraint firstItem="Fry-kP-KsL" firstAttribute="centerX" secondItem="huQ-sh-buf" secondAttribute="centerX" id="USC-PT-NSW"/>
                             <constraint firstItem="myr-GE-qmH" firstAttribute="leading" secondItem="sCA-u9-hAK" secondAttribute="centerX" constant="60" id="V2f-89-5jS"/>
                             <constraint firstItem="huQ-sh-buf" firstAttribute="top" secondItem="erZ-sO-2KZ" secondAttribute="top" id="asy-qC-S88"/>
-                            <constraint firstItem="erZ-sO-2KZ" firstAttribute="trailing" secondItem="huQ-sh-buf" secondAttribute="leading" constant="-50" id="js7-eL-ZPi"/>
+                            <constraint firstItem="erZ-sO-2KZ" firstAttribute="centerX" secondItem="huQ-sh-buf" secondAttribute="centerX" constant="-100" id="js7-eL-ZPi"/>
                             <constraint firstItem="XmL-Pi-LG8" firstAttribute="leading" secondItem="Fry-kP-KsL" secondAttribute="leading" id="kqW-pE-A6d"/>
                             <constraint firstItem="sCA-u9-hAK" firstAttribute="top" secondItem="8bC-Xf-vdC" secondAttribute="top" constant="30" id="n3m-Qt-msM"/>
                             <constraint firstItem="XmL-Pi-LG8" firstAttribute="bottom" secondItem="8bC-Xf-vdC" secondAttribute="bottom" id="yV6-bO-H9b"/>
