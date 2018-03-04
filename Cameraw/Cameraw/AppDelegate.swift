@@ -2,7 +2,7 @@
 //  AppDelegate.swift
 //  Cameraw
 //
-//  Created by J L Newman on 1/29/18.
+//  Created by Yangxiao Wang on 1/29/18.
 //  Copyright © 2018 Yangxiao Wang. All rights reserved.
 //
 

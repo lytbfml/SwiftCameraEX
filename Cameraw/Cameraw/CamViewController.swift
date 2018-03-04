@@ -2,7 +2,7 @@
 //  ViewController.swift
 //  Cameraw
 //
-//  Created by J L Newman on 1/29/18.
+//  Created by Yangxiao Wang on 1/29/18.
 //  Copyright © 2018 Yangxiao Wang. All rights reserved.
 //
 
@@ -132,6 +132,24 @@ class CamViewController: UIViewController {
         super.viewWillDisappear(animated)
     }
     
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .all
+    }
+    
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        
+        if let videoPreviewLayerConnection = previewView.videoPreviewLayer.connection {
+            let deviceOrientation = UIDevice.current.orientation
+            guard let newVideoOrientation = AVCaptureVideoOrientation(deviceOrientation: deviceOrientation),
+                deviceOrientation.isPortrait || deviceOrientation.isLandscape else {
+                    return
+            }
+            
+            videoPreviewLayerConnection.videoOrientation = newVideoOrientation
+        }
+    }
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
     }
@@ -172,26 +190,20 @@ class CamViewController: UIViewController {
             session.addInput(videoInput)
             self.videoDeviceInput = videoInput
             
-            //            DispatchQueue.main.async {
-            //                /*
-            //                 Why are we dispatching this to the main queue?
-            //                 Because AVCaptureVideoPreviewLayer is the backing layer for PreviewView and UIView
-            //                 can only be manipulated on the main thread.
-            //                 Note: As an exception to the above rule, it is not necessary to serialize video orientation changes
-            //                 on the AVCaptureVideoPreviewLayer’s connection with other session manipulation.
-            //
-            //                 Use the status bar orientation as the initial video orientation. Subsequent orientation changes are
-            //                 handled by CameraViewController.viewWillTransition(to:with:).
-            //                 */
-            //                let statusBarOrientation = UIApplication.shared.statusBarOrientation
-            //                var initialVideoOrientation: AVCaptureVideoOrientation = .portrait
-            //                if statusBarOrientation != .unknown {
-            //                    if let videoOrientation = AVCaptureVideoOrientation(interfaceOrientation: statusBarOrientation) {
-            //                        initialVideoOrientation = videoOrientation
-            //                    }
-            //                }
-            //                self.previewView.videoPreviewLayer.connection?.videoOrientation = initialVideoOrientation
-            //            }
+            DispatchQueue.main.async {
+                /*
+                 Use the status bar orientation as the initial video orientation. Subsequent orientation changes are
+                 handled by CameraViewController.viewWillTransition(to:with:).
+                 */
+                let statusBarOrientation = UIApplication.shared.statusBarOrientation
+                var initialVideoOrientation: AVCaptureVideoOrientation = .portrait
+                if statusBarOrientation != .unknown {
+                    if let videoOrientation = AVCaptureVideoOrientation(interfaceOrientation: statusBarOrientation) {
+                        initialVideoOrientation = videoOrientation
+                    }
+                }
+                self.previewView.videoPreviewLayer.connection?.videoOrientation = initialVideoOrientation
+            }
         } else {
             print("Could not add video device input to the session")
             setupResult = .configurationFailed
@@ -302,7 +314,13 @@ class CamViewController: UIViewController {
     
     private func takePhoto()
     {
+        let videoPreviewLayerOrientation = previewView.videoPreviewLayer.connection?.videoOrientation
+        
         sessionQueue.async {
+            
+            if let photoOutputConnection = self.photoOutput.connection(with: .video) {
+                photoOutputConnection.videoOrientation = videoPreviewLayerOrientation!
+            }
             
             let device = self.videoDeviceInput.device
             self.printSettings(dev: device);
@@ -568,7 +586,27 @@ class CamViewController: UIViewController {
     
 }
 
-
+extension AVCaptureVideoOrientation {
+    init?(deviceOrientation: UIDeviceOrientation) {
+        switch deviceOrientation {
+        case .portrait: self = .portrait
+        case .portraitUpsideDown: self = .portraitUpsideDown
+        case .landscapeLeft: self = .landscapeRight
+        case .landscapeRight: self = .landscapeLeft
+        default: return nil
+        }
+    }
+    
+    init?(interfaceOrientation: UIInterfaceOrientation) {
+        switch interfaceOrientation {
+        case .portrait: self = .portrait
+        case .portraitUpsideDown: self = .portraitUpsideDown
+        case .landscapeLeft: self = .landscapeLeft
+        case .landscapeRight: self = .landscapeRight
+        default: return nil
+        }
+    }
+}
 
 
 

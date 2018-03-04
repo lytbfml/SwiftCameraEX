@@ -2,7 +2,7 @@
 //  PhotoCaptureDelegate.swift
 //  Cameraw
 //
-//  Created by J L Newman on 2/7/18.
+//  Created by Yangxiao Wang on 2/7/18.
 //  Copyright © 2018 Yangxiao Wang. All rights reserved.
 //
 

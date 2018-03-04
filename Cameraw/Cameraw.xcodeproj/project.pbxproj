@@ -39,11 +39,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4F8EA464204C9BD5009E8B2A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		4FDB846A201FBFD50099BDEC = {
 			isa = PBXGroup;
 			children = (
 				4FDB8475201FBFD50099BDEC /* Cameraw */,
 				4FDB8474201FBFD50099BDEC /* Products */,
+				4F8EA464204C9BD5009E8B2A /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -103,6 +111,11 @@
 					4FDB8472201FBFD50099BDEC = {
 						CreatedOnToolsVersion = 9.2;
 						ProvisioningStyle = Automatic;
+						SystemCapabilities = {
+							com.apple.InAppPurchase = {
+								enabled = 0;
+							};
+						};
 					};
 				};
 			};
