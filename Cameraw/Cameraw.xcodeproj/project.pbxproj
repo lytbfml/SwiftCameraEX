@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4F8EA46C205C557A009E8B2A /* SettingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F8EA46B205C557A009E8B2A /* SettingViewController.swift */; };
 		4FDB8477201FBFD50099BDEC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FDB8476201FBFD50099BDEC /* AppDelegate.swift */; };
 		4FDB8479201FBFD50099BDEC /* CamViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FDB8478201FBFD50099BDEC /* CamViewController.swift */; };
 		4FDB847C201FBFD50099BDEC /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4FDB847A201FBFD50099BDEC /* Main.storyboard */; };
@@ -14,9 +15,13 @@
 		4FDB8481201FBFD50099BDEC /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4FDB847F201FBFD50099BDEC /* LaunchScreen.storyboard */; };
 		4FDB8489201FCC1A0099BDEC /* PreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FDB8488201FCC1A0099BDEC /* PreviewView.swift */; };
 		4FDB848B202BF1C70099BDEC /* PhotoCaptureDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FDB848A202BF1C70099BDEC /* PhotoCaptureDelegate.swift */; };
+		4FF5E286205C6336001CB5F8 /* AddSettingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FF5E285205C6336001CB5F8 /* AddSettingViewController.swift */; };
+		4FF5E28A205C6ADF001CB5F8 /* SettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FF5E289205C6ADF001CB5F8 /* SettingsController.swift */; };
+		4FF5E28C205C6B4D001CB5F8 /* SettingObj.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FF5E28B205C6B4D001CB5F8 /* SettingObj.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		4F8EA46B205C557A009E8B2A /* SettingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingViewController.swift; sourceTree = "<group>"; };
 		4FDB8473201FBFD50099BDEC /* Cameraw.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cameraw.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4FDB8476201FBFD50099BDEC /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		4FDB8478201FBFD50099BDEC /* CamViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CamViewController.swift; sourceTree = "<group>"; };
@@ -26,6 +31,9 @@
 		4FDB8482201FBFD50099BDEC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		4FDB8488201FCC1A0099BDEC /* PreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewView.swift; sourceTree = "<group>"; };
 		4FDB848A202BF1C70099BDEC /* PhotoCaptureDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoCaptureDelegate.swift; sourceTree = "<group>"; };
+		4FF5E285205C6336001CB5F8 /* AddSettingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSettingViewController.swift; sourceTree = "<group>"; };
+		4FF5E289205C6ADF001CB5F8 /* SettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsController.swift; sourceTree = "<group>"; };
+		4FF5E28B205C6B4D001CB5F8 /* SettingObj.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingObj.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,7 +78,11 @@
 				4FDB8488201FCC1A0099BDEC /* PreviewView.swift */,
 				4FDB848A202BF1C70099BDEC /* PhotoCaptureDelegate.swift */,
 				4FDB8478201FBFD50099BDEC /* CamViewController.swift */,
+				4F8EA46B205C557A009E8B2A /* SettingViewController.swift */,
+				4FF5E285205C6336001CB5F8 /* AddSettingViewController.swift */,
 				4FDB847A201FBFD50099BDEC /* Main.storyboard */,
+				4FF5E289205C6ADF001CB5F8 /* SettingsController.swift */,
+				4FF5E28B205C6B4D001CB5F8 /* SettingObj.swift */,
 				4FDB847D201FBFD50099BDEC /* Assets.xcassets */,
 				4FDB847F201FBFD50099BDEC /* LaunchScreen.storyboard */,
 				4FDB8482201FBFD50099BDEC /* Info.plist */,
@@ -155,7 +167,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4F8EA46C205C557A009E8B2A /* SettingViewController.swift in Sources */,
+				4FF5E286205C6336001CB5F8 /* AddSettingViewController.swift in Sources */,
 				4FDB8479201FBFD50099BDEC /* CamViewController.swift in Sources */,
+				4FF5E28A205C6ADF001CB5F8 /* SettingsController.swift in Sources */,
+				4FF5E28C205C6B4D001CB5F8 /* SettingObj.swift in Sources */,
 				4FDB8477201FBFD50099BDEC /* AppDelegate.swift in Sources */,
 				4FDB848B202BF1C70099BDEC /* PhotoCaptureDelegate.swift in Sources */,
 				4FDB8489201FCC1A0099BDEC /* PreviewView.swift in Sources */,
@@ -298,7 +314,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = MX32H8HK28;
 				INFOPLIST_FILE = Cameraw/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.yangxiao.Cameraw;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -314,7 +330,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = MX32H8HK28;
 				INFOPLIST_FILE = Cameraw/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.yangxiao.Cameraw;
 				PRODUCT_NAME = "$(TARGET_NAME)";

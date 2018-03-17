@@ -12,16 +12,8 @@ import Photos
 
 class CamViewController: UIViewController {
     
-    var count = 0
-    var photo_num = 10
-    
-    private let ISO_VAL_100 : Float = 100
-    private let ISO_VAL_200 : Float = 200
-    private let ISO_VAL_1000 : Float = 1000
-    
-    private let EXP_1_10 : Float64 = 0.1
-    private let EXP_1_50 : Float64 = 0.02
-    private let EXP_1_200 : Float64 = 0.005
+    static var count = 0
+    static var settingCount = 0;
     
     private let photoOutput = AVCapturePhotoOutput()
     
@@ -29,24 +21,16 @@ class CamViewController: UIViewController {
     
     @IBOutlet weak var isoLabel: UILabel!
     @IBOutlet weak var expLabel: UILabel!
-    
-    @IBOutlet weak var isoIn: UITextField!
-    @IBOutlet weak var expIn: UITextField!
-    
-    @IBOutlet weak var inputToggleBtn: UIButton!
-    @IBAction func inputToggle(_ inputToggleBtn: UIButton) {
-        if(isoIn.isHidden) {
-            isoIn.isHidden = false
-            expIn.isHidden = false
-        } else {
-            isoIn.isHidden = true
-            expIn.isHidden = true
-        }
-        
-    }
+    @IBOutlet weak var settingsPage: UIButton!
     @IBOutlet weak var photoButton: UIButton!
     @IBAction func capturePhoto(_ photoButton: UIButton) {
-        self.takePhoto()
+        if(SettingsController.settingsArray.count == 0) {
+            CamViewController.count = 0;
+            self.takePhoto()
+        }
+        else {
+            self.captureSettings(index: 0)
+        }
     }
     
     override func viewDidLoad() {
@@ -54,7 +38,6 @@ class CamViewController: UIViewController {
         
         UIConfig()
         previewView.session = session
-        
         
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
@@ -250,20 +233,12 @@ class CamViewController: UIViewController {
         photoButton.layer.shadowOpacity = 0.5
         photoButton.layer.cornerRadius = photoButton.frame.width / 4
         
-        inputToggleBtn.layer.shadowColor = UIColor.black.cgColor
-        inputToggleBtn.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
-        inputToggleBtn.layer.masksToBounds = false
-        inputToggleBtn.layer.shadowRadius = 1.0
-        inputToggleBtn.layer.shadowOpacity = 0.5
-        inputToggleBtn.layer.cornerRadius = inputToggleBtn.frame.width / 6
-        
-        isoIn.isHidden = true
-        expIn.isHidden = true
-        
-        expIn.text = nil
-        expIn.placeholder = "Exp"
-        isoIn.text = nil
-        isoIn.placeholder = "Iso"
+        settingsPage.layer.shadowColor = UIColor.black.cgColor
+        settingsPage.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
+        settingsPage.layer.masksToBounds = false
+        settingsPage.layer.shadowRadius = 1.0
+        settingsPage.layer.shadowOpacity = 0.5
+        settingsPage.layer.cornerRadius = settingsPage.frame.width / 4
     }
     
     @IBAction private func focusAndExposeTap(_ gestureRecognizer: UITapGestureRecognizer) {
@@ -311,21 +286,18 @@ class CamViewController: UIViewController {
         }
     }
     
-    
+    // MARK: Take photo
     private func takePhoto()
     {
         let videoPreviewLayerOrientation = previewView.videoPreviewLayer.connection?.videoOrientation
-        
         sessionQueue.async {
-            
             if let photoOutputConnection = self.photoOutput.connection(with: .video) {
                 photoOutputConnection.videoOrientation = videoPreviewLayerOrientation!
             }
-            
             let device = self.videoDeviceInput.device
             self.printSettings(dev: device);
-            let rawFormatType = kCVPixelFormatType_14Bayer_RGGB
             
+            let rawFormatType = kCVPixelFormatType_14Bayer_RGGB
             guard self.photoOutput.availableRawPhotoPixelFormatTypes.contains(NSNumber(value: rawFormatType).uint32Value) else {
                 print("No available RAW pixel formats")
                 return
@@ -340,6 +312,7 @@ class CamViewController: UIViewController {
             
             let photoCaptureProcessor = PhotoCaptureProcessor(with: photoSettings, willCapturePhotoAnimation: {
                 // MARK: willCapturePhotoAnimation
+                print("willCapturePhotoAnimation")
 //                DispatchQueue.main.async {
 //                    self.previewView.videoPreviewLayer.opacity = 0
 //                    UIView.animate(withDuration: 0.25) {
@@ -349,11 +322,24 @@ class CamViewController: UIViewController {
             }, completionHandler: { photoCaptureProcessor in
                 self.sessionQueue.async {
                     self.inProgressPhotoCaptureDelegates[photoCaptureProcessor.requestedPhotoSettings.uniqueID] = nil
-                    
-                    //MARK: repeat capture
-                    self.count = self.count+1
-                    
-                    self.captureNinePreset()
+                    //MARK: Repeated Capturing
+                    if(CamViewController.settingCount < SettingsController.settingsArray.count) {
+                        CamViewController.count += 1
+                        if(CamViewController.count >= SettingsController.settingsArray[CamViewController.settingCount].num) {
+                            CamViewController.settingCount += 1
+                            CamViewController.count = 0
+                        }
+                        if(CamViewController.settingCount < SettingsController.settingsArray.count) {
+                            self.captureSettings(index: CamViewController.settingCount)
+                        }
+                        else {
+                            CamViewController.count = 0
+                            CamViewController.settingCount = 0
+                            let alert = UIAlertController(title: "Complete!", message: "", preferredStyle: UIAlertControllerStyle.alert)
+                            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+                            self.present(alert, animated: true, completion: nil)
+                        }
+                    }
                 }
             })
             
@@ -468,6 +454,15 @@ class CamViewController: UIViewController {
     //---------------------------------------------------Helper Method--------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------------------
 
+    private func captureSettings(index: Int) {
+        let currentSetting = SettingsController.settingsArray[index]
+        if(CamViewController.count == 0) {
+            takePhotoWithBothSet(time: currentSetting.exp, isoVal: currentSetting.iso)
+        }
+        else if(CamViewController.count < currentSetting.num) {
+            takePhoto()
+        }
+    }
     
     private func takePhotoWithBothSet(time: Float64, isoVal: Float) {
         do {
@@ -519,69 +514,7 @@ class CamViewController: UIViewController {
         print("printSettings - ExpVal: \(expValInt)")
         print("printSettings - expCMTime: \(exp)")
         print("printSettings - device.exposureMode: \(dev.exposureMode.rawValue) (locked = 0, autoExpose = 1, continuousAutoExposure = 2, custom = 3)")
-    }
-    
-    
-    private func captureNinePreset() {
-        print("captureNinePreset - Counter: \(count)\n\n")
-        
-        if(self.count < self.photo_num) {
-            self.takePhoto();
-        }
-        else if(self.count == (self.photo_num * 1)) {
-            takePhotoWithBothSet(time: EXP_1_10, isoVal: ISO_VAL_100)
-        }
-        else if(self.count > (self.photo_num * 1) && self.count < (self.photo_num * 2)) {
-            takePhoto()
-        }
-        else if(self.count == (self.photo_num * 2)) {
-            takePotoWithIsoSet(isoVal: ISO_VAL_200)
-        }
-        else if(self.count > (self.photo_num * 2) && self.count < (self.photo_num * 3)) {
-            takePhoto()
-        }
-        else if(self.count == (self.photo_num * 3)) {
-            takePotoWithIsoSet(isoVal: ISO_VAL_1000)
-        }
-        else if(self.count > (self.photo_num * 3) && self.count < (self.photo_num * 4)) {
-            takePhoto()
-        }
-        else if(self.count == (self.photo_num * 4)) {
-            takePhotoWithBothSet(time: EXP_1_50, isoVal: ISO_VAL_100)
-        }
-        else if(self.count > (self.photo_num * 4) && self.count < (self.photo_num * 5)) {
-            takePhoto()
-        }
-        else if(self.count == (self.photo_num * 5)) {
-            takePotoWithIsoSet(isoVal: ISO_VAL_200)
-        }
-        else if(self.count > (self.photo_num * 5) && self.count < (self.photo_num * 6)) {
-            takePhoto()
-        }
-        else if(self.count == (self.photo_num * 6)) {
-            takePotoWithIsoSet(isoVal: ISO_VAL_1000)
-        }
-        else if(self.count > (self.photo_num * 6) && self.count < (self.photo_num * 7)) {
-            takePhoto()
-        }
-        else if(self.count == (self.photo_num * 7)) {
-            takePhotoWithBothSet(time: EXP_1_200, isoVal: ISO_VAL_100)
-        }
-        else if(self.count > (self.photo_num * 7) && self.count < (self.photo_num * 8)) {
-            takePhoto()
-        }
-        else if(self.count == (self.photo_num * 8)) {
-            takePotoWithIsoSet(isoVal: ISO_VAL_200)
-        }
-        else if(self.count > (self.photo_num * 8) && self.count < (self.photo_num * 9)) {
-            takePhoto()
-        }
-        else if(self.count == (self.photo_num * 9)) {
-            takePotoWithIsoSet(isoVal: ISO_VAL_1000)
-        }
-        else if(self.count > (self.photo_num * 9) && self.count < (self.photo_num * 10)) {
-            takePhoto()
-        }
+        print("printSettings - Settings No. \(CamViewController.settingCount), Photo No. \(CamViewController.count)")
     }
     
 }
