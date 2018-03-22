@@ -19,6 +19,10 @@ class CamViewController: UIViewController {
     
     private var inProgressPhotoCaptureDelegates = [Int64: PhotoCaptureProcessor]()
     
+    private var keyValueObservations = [NSKeyValueObservation]()
+    
+    @objc var captureDevice: AVCaptureDevice?
+    
     @IBOutlet weak var isoLabel: UILabel!
     @IBOutlet weak var expLabel: UILabel!
     @IBOutlet weak var settingsPage: UIButton!
@@ -33,6 +37,11 @@ class CamViewController: UIViewController {
         }
     }
     
+    
+    //------------------------------------------------------------------------------------------------------------------------------
+    //---------------------------------------------MARK: View Controller Life Cycle-------------------------------------------------
+    //------------------------------------------------------------------------------------------------------------------------------
+
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -79,11 +88,8 @@ class CamViewController: UIViewController {
                                                             handler: nil))
                     
                     alertController.addAction(UIAlertAction(title: NSLocalizedString("Settings", comment: "Alert button to open Settings"),
-                                                            style: .`default`,
-                                                            handler: { _ in
-                                                                UIApplication.shared.open(URL(string: UIApplicationOpenSettingsURLString)!, options: [:], completionHandler: nil)
+                                                            style: .`default`, handler: { _ in UIApplication.shared.open(URL(string: UIApplicationOpenSettingsURLString)!, options: [:], completionHandler: nil)
                     }))
-                    
                     self.present(alertController, animated: true, completion: nil)
                 }
                 
@@ -93,10 +99,7 @@ class CamViewController: UIViewController {
                     let message = NSLocalizedString("Unable to capture media", comment: alertMsg)
                     let alertController = UIAlertController(title: "AVCam", message: message, preferredStyle: .alert)
                     
-                    alertController.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Alert OK button"),
-                                                            style: .cancel,
-                                                            handler: nil))
-                    
+                    alertController.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Alert OK button"), style: .cancel, handler: nil))
                     self.present(alertController, animated: true, completion: nil)
                 }
             }
@@ -128,7 +131,6 @@ class CamViewController: UIViewController {
                 deviceOrientation.isPortrait || deviceOrientation.isLandscape else {
                     return
             }
-            
             videoPreviewLayerConnection.videoOrientation = newVideoOrientation
         }
     }
@@ -164,6 +166,7 @@ class CamViewController: UIViewController {
         session.sessionPreset = .photo
         
         let defaultVideoDevice = defaultDevice()
+        self.captureDevice = defaultVideoDevice
         guard let videoInput = try? AVCaptureDeviceInput(device: defaultVideoDevice) else {
             print("Unable to obtain video input for default camera.")
             return
@@ -174,10 +177,6 @@ class CamViewController: UIViewController {
             self.videoDeviceInput = videoInput
             
             DispatchQueue.main.async {
-                /*
-                 Use the status bar orientation as the initial video orientation. Subsequent orientation changes are
-                 handled by CameraViewController.viewWillTransition(to:with:).
-                 */
                 let statusBarOrientation = UIApplication.shared.statusBarOrientation
                 var initialVideoOrientation: AVCaptureVideoOrientation = .portrait
                 if statusBarOrientation != .unknown {
@@ -209,14 +208,10 @@ class CamViewController: UIViewController {
     }
     
     func defaultDevice() -> AVCaptureDevice {
-        if let device = AVCaptureDevice.default(AVCaptureDevice.DeviceType.builtInDualCamera,
-                                                for: AVMediaType.video,
-                                                position: AVCaptureDevice.Position.back) {
+        if let device = AVCaptureDevice.default(AVCaptureDevice.DeviceType.builtInDualCamera, for: AVMediaType.video, position: AVCaptureDevice.Position.back) {
             print("defaultDevice - using dual cam")
             return device // use dual camera on supported devices
-        } else if let device = AVCaptureDevice.default(.builtInWideAngleCamera,
-                                                       for: .video,
-                                                       position: .back) {
+        } else if let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) {
             print("defaultDevice - using wide angle cam")
             return device // use default back facing camera otherwise
         } else {
@@ -241,12 +236,10 @@ class CamViewController: UIViewController {
         settingsPage.layer.cornerRadius = settingsPage.frame.width / 4
     }
     
+    // MARK: Focus tap
     @IBAction private func focusAndExposeTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        let devicePoint = previewView.videoPreviewLayer.captureDevicePointConverted(fromLayerPoint: gestureRecognizer.location(in: gestureRecognizer.view))
-        focus(with: .autoFocus, exposureMode: .autoExpose, at: devicePoint, monitorSubjectAreaChange: true)
-        DispatchQueue.main.async {
-            self.photoButton.isEnabled = false
-        }
+        //let devicePoint = previewView.videoPreviewLayer.captureDevicePointConverted(fromLayerPoint: gestureRecognizer.location(in: gestureRecognizer.view))
+        //focus(with: .autoFocus, exposureMode: .autoExpose, at: devicePoint, monitorSubjectAreaChange: true)
     }
     
     private func focus(with focusMode: AVCaptureDevice.FocusMode, exposureMode: AVCaptureDevice.ExposureMode, at devicePoint: CGPoint, monitorSubjectAreaChange: Bool) {
@@ -260,12 +253,10 @@ class CamViewController: UIViewController {
                     device.focusPointOfInterest = devicePoint
                     device.focusMode = focusMode
                 }
-                
                 if device.isExposurePointOfInterestSupported && device.isExposureModeSupported(exposureMode) {
                     device.exposurePointOfInterest = devicePoint
                     device.exposureMode = exposureMode
                 }
-                
                 device.isSubjectAreaChangeMonitoringEnabled = monitorSubjectAreaChange
                 device.unlockForConfiguration()
                 
@@ -322,6 +313,7 @@ class CamViewController: UIViewController {
             }, completionHandler: { photoCaptureProcessor in
                 self.sessionQueue.async {
                     self.inProgressPhotoCaptureDelegates[photoCaptureProcessor.requestedPhotoSettings.uniqueID] = nil
+                    
                     //MARK: Repeated Capturing
                     if(CamViewController.settingCount < SettingsController.settingsArray.count) {
                         CamViewController.count += 1
@@ -342,20 +334,14 @@ class CamViewController: UIViewController {
                     }
                 }
             })
-            
             self.inProgressPhotoCaptureDelegates[photoCaptureProcessor.requestedPhotoSettings.uniqueID] = photoCaptureProcessor
             self.photoOutput.capturePhoto(with: photoSettings, delegate: photoCaptureProcessor)
-            
         }
     }
-    
-    
-    private var keyValueObservations = [NSKeyValueObservation]()
     
     private func addObservers() {
         let keyValueObservation = session.observe(\.isRunning, options: .new) { _, change in
             guard let isSessionRunning = change.newValue else { return }
-            
             DispatchQueue.main.async {
                 self.photoButton.isEnabled = isSessionRunning
             }
@@ -365,36 +351,53 @@ class CamViewController: UIViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(subjectAreaDidChange), name: .AVCaptureDeviceSubjectAreaDidChange, object: videoDeviceInput.device)
         NotificationCenter.default.addObserver(self, selector: #selector(sessionRuntimeError), name: .AVCaptureSessionRuntimeError, object: session)
         
-        /*
-         A session can only run when the app is full screen. It will be interrupted
-         in a multi-app layout, introduced in iOS 9, see also the documentation of
-         AVCaptureSessionInterruptionReason. Add observers to handle these session
-         interruptions and show a preview is paused message. See the documentation
-         of AVCaptureSessionWasInterruptedNotification for other interruption reasons.
-         */
         NotificationCenter.default.addObserver(self, selector: #selector(sessionWasInterrupted), name: .AVCaptureSessionWasInterrupted, object: session)
         NotificationCenter.default.addObserver(self, selector: #selector(sessionInterruptionEnded), name: .AVCaptureSessionInterruptionEnded, object: session)
+        
+        self.addObserver(self, forKeyPath: "captureDevice.lensPosition" , options: .new, context: nil)
+        self.addObserver(self, forKeyPath: "captureDevice.exposureDuration", options: .new, context: nil)
+        self.addObserver(self, forKeyPath: "captureDevice.ISO", options: .new, context: nil)
+        
     }
     
     private func removeObservers() {
         NotificationCenter.default.removeObserver(self)
-        
         for keyValueObservation in keyValueObservations {
             keyValueObservation.invalidate()
         }
         keyValueObservations.removeAll()
+        self.removeObserver(self, forKeyPath: "captureDevice.lensPosition")
+        self.removeObserver(self, forKeyPath: "captureDevice.exposureDuration")
+        self.removeObserver(self, forKeyPath: "captureDevice.ISO")
+    }
+    
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
+        
+        if keyPath == "captureDevice.lensPosition" {
+            //self.lensPosition.text = String(format: "%.1f", (self.videoDeviceInput.device.lensPosition)!)
+            //print("\(self.videoDeviceInput.device.lensPosition)")
+        }
+        
+        if keyPath == "captureDevice.exposureDuration" {
+            let exposureDurationSeconds = CMTimeGetSeconds((self.captureDevice?.exposureDuration)!)
+            self.expLabel.text = String(format: "Exp: 1/%.f", 1.0 / exposureDurationSeconds)
+        }
+        
+        if keyPath == "captureDevice.ISO" {
+            self.isoLabel.text = String(format: "Iso: %.f", (self.captureDevice?.iso)!)
+        }
     }
     
     @objc
     func subjectAreaDidChange(notification: NSNotification) {
         let devicePoint = CGPoint(x: 0.5, y: 0.5)
         focus(with: .continuousAutoFocus, exposureMode: .continuousAutoExposure, at: devicePoint, monitorSubjectAreaChange: false)
+        fatalError("------subjectAreaDidChange------")
     }
     
     @objc
     func sessionRuntimeError(notification: NSNotification) {
         guard let error = notification.userInfo?[AVCaptureSessionErrorKey] as? AVError else { return }
-        
         print("Capture session runtime error: \(error)")
         
         if error.code == .mediaServicesWereReset {
@@ -422,57 +425,53 @@ class CamViewController: UIViewController {
         print("Capture session interruption ended")
     }
     
-    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool
-    {
-        //        let allowedCharacters = CharacterSet.decimalDigits
-        //        let characterSet = CharacterSet(charactersIn: string)
-        //        return allowedCharacters.isSuperset(of: characterSet)
-        
-        let characterSet = CharacterSet(charactersIn: string)
-        let boolIsNumber = CharacterSet.decimalDigits.isSuperset(of: characterSet)
-        if boolIsNumber == true {
-            return true
-        } else {
-            if string == "." {
-                let countdots = textField.text!.components(separatedBy: ".").count - 1
-                if countdots == 0 {
-                    return true
-                } else {
-                    if countdots > 0 && string == "." {
-                        return false
-                    } else {
-                        return true
-                    }
-                }
-            } else {
-                return false
-            }
-        }
-    }
-    
     //------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------Helper Method--------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------------------
-
+    
+    private func setLabel(iso: Float, exposureDurationSeconds: Float64) {
+        self.isoLabel.text = String(format: "Iso: %.f", iso)
+        self.expLabel.text = String(format: "Exp: 1/%.f", 1.0 / exposureDurationSeconds)
+        self.isoLabel.isHidden = false
+        self.expLabel.isHidden = false
+        self.photoButton.isEnabled = true
+    }
+    
     private func captureSettings(index: Int) {
         let currentSetting = SettingsController.settingsArray[index]
+        
         if(CamViewController.count == 0) {
-            takePhotoWithBothSet(time: currentSetting.exp, isoVal: currentSetting.iso)
+            if(currentSetting.auto) {
+                takePhotoWithAuto()
+            } else {
+                takePhotoWithBothSet(time: currentSetting.exp, isoVal: currentSetting.iso)
+            }
         }
         else if(CamViewController.count < currentSetting.num) {
             takePhoto()
         }
     }
     
-    private func takePhotoWithBothSet(time: Float64, isoVal: Float) {
+    private func takePhotoWithAuto() {
         do {
             try self.videoDeviceInput.device.lockForConfiguration()
-            self.videoDeviceInput.device.setExposureModeCustom(duration: CMTimeMakeWithSeconds(time, 1000*1000*1000), iso: isoVal, completionHandler: { (time) -> Void in
-                self.takePhoto()
-            })
+            captureDevice?.exposureMode = .autoExpose
+            takePhoto()
             self.videoDeviceInput.device.unlockForConfiguration()
         } catch let error {
-            NSLog("Could not lock device for configuration: \(error)")
+            print("Could not lock device for configuration: \(error)")
+        }
+    }
+    
+    private func takePhotoWithBothSet(time: Float64, isoVal: Float) {
+        do {
+            try self.captureDevice?.lockForConfiguration()
+            self.captureDevice?.setExposureModeCustom(duration: CMTimeMakeWithSeconds(time, 1000*1000*1000), iso: isoVal, completionHandler: { (time) -> Void in
+                self.takePhoto()
+            })
+            self.captureDevice?.unlockForConfiguration()
+        } catch let error {
+            print("Could not lock device for configuration: \(error)")
         }
     }
     
@@ -484,7 +483,7 @@ class CamViewController: UIViewController {
             })
             self.videoDeviceInput.device.unlockForConfiguration()
         } catch let error {
-            NSLog("Could not lock device for configuration: \(error)")
+            print("Could not lock device for configuration: \(error)")
         }
     }
     
@@ -498,7 +497,7 @@ class CamViewController: UIViewController {
             })
             self.videoDeviceInput.device.unlockForConfiguration()
         } catch let error {
-            NSLog("Could not lock device for configuration: \(error)")
+            print("Could not lock device for configuration: \(error)")
         }
     }
     
@@ -507,12 +506,12 @@ class CamViewController: UIViewController {
     }
     
     private func printSettings(dev: AVCaptureDevice) {
-        let exp = dev.exposureDuration
         let iso = dev.iso
-        let expValInt = Int(1 / CMTimeGetSeconds(dev.exposureDuration))
-        print("printSettings - ISO: \(iso)")
-        print("printSettings - ExpVal: \(expValInt)")
-        print("printSettings - expCMTime: \(exp)")
+        let exposureDurationSeconds = CMTimeGetSeconds(dev.exposureDuration)
+        
+        print(String(format: "printSettings - Iso: %.f", iso))
+        print(String(format: "printSettings - ExpVal:  1/%.f", 1.0 / exposureDurationSeconds))
+        print("printSettings - expCMTimeSec: \(exposureDurationSeconds)")
         print("printSettings - device.exposureMode: \(dev.exposureMode.rawValue) (locked = 0, autoExpose = 1, continuousAutoExposure = 2, custom = 3)")
         print("printSettings - Settings No. \(CamViewController.settingCount), Photo No. \(CamViewController.count)")
     }

@@ -36,8 +36,12 @@ class SettingViewController: UIViewController, UITableViewDelegate, UITableViewD
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = settingTableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
         cell.textLabel?.text = "\(indexPath.row + 1)"
-        cell.detailTextLabel?.text = "ISO: \(String(SettingsController.settingsArray[indexPath.row].iso)),  Exposure: \(String(SettingsController.settingsArray[indexPath.row].exp)), Num: \(String(SettingsController.settingsArray[indexPath.row].num))"
-        
+        let currentSetting = SettingsController.settingsArray[indexPath.row]
+        if(currentSetting.auto) {
+            cell.detailTextLabel?.text = "Auto Exposure, Num: \(String(currentSetting.num))"
+        } else {
+            cell.detailTextLabel?.text = "ISO: \(String(currentSetting.iso)),  Exposure: \(String(currentSetting.exp)), Num: \(String(currentSetting.num))"
+        }
         return cell
     }
     

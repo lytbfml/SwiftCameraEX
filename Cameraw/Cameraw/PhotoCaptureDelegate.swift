@@ -30,33 +30,35 @@ class PhotoCaptureProcessor: NSObject {
     private func didFinish() {
         completionHandler(self)
     }
-    
 }
 
 extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
     
+    
+    
     func photoOutput(_ output: AVCapturePhotoOutput, willCapturePhotoFor resolvedSettings: AVCaptureResolvedPhotoSettings) {
         willCapturePhotoAnimation()
     }
+
     
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         
         if let error = error {
             print("Fail to capture photo: \(error)")
         } else {
-//            var metadataAttachments: Dictionary = photo.metadata as Dictionary
-//            
-//            print(photo.metadata[kCGImagePropertyDNGLensInfo as String])
-//
-//            print(photo.metadata[kCGImagePropertyExifISOSpeed as String])
-//            print(photo.metadata[kCGImagePropertyExifISOSpeedRatings as String])
-//            print(photo.metadata[kCGImagePropertyExifExposureTime as String])
-//            print(photo.metadata[kCGImagePropertyExifExposureBiasValue as String])
+            let photoMetadata = photo.metadata
+            // Returns corresponting NSCFNumber. It seems to specify the origin of the image
+            //                print("Metadata orientation: ",photoMetadata["Orientation"])
             
+            // Returns corresponting NSCFNumber. It seems to specify the origin of the image
+            print("Metadata orientation with key: ",photoMetadata[String(kCGImagePropertyOrientation)] as Any)
+            print("Metadata: ",photoMetadata[String(kCGImagePropertyExifISOSpeedRatings)] as Any)
             
             photoData = photo.fileDataRepresentation()
+            
         }
     }
+    
     
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings, error: Error?) {
         if let error = error {
