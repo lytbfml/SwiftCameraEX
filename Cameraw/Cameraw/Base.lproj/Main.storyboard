@@ -20,7 +20,22 @@
                         <subviews>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="XmL-Pi-LG8" userLabel="Preview" customClass="PreviewView" customModule="Cameraw" customModuleProvider="target">
                                 <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                                <subviews>
+                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Focus:" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="T0l-dc-aYG">
+                                        <rect key="frame" x="255" y="20" width="100" height="25"/>
+                                        <constraints>
+                                            <constraint firstAttribute="height" constant="25" id="75c-7E-7lN"/>
+                                            <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="100" id="IOu-ug-Axl"/>
+                                        </constraints>
+                                        <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                        <color key="textColor" red="1" green="0.14913141730000001" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        <nil key="highlightedColor"/>
+                                    </label>
+                                </subviews>
                                 <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="trailing" secondItem="T0l-dc-aYG" secondAttribute="trailing" constant="20" id="Y4a-qt-env"/>
+                                </constraints>
                                 <connections>
                                     <outletCollection property="gestureRecognizers" destination="bvh-M9-YQq" appends="YES" id="YJO-9x-DNj"/>
                                 </connections>
@@ -86,6 +101,7 @@
                             <constraint firstItem="ktG-bt-NT4" firstAttribute="leading" secondItem="Fry-kP-KsL" secondAttribute="leading" constant="20" id="WD7-cy-h0r"/>
                             <constraint firstItem="sCA-u9-hAK" firstAttribute="leading" secondItem="Fry-kP-KsL" secondAttribute="leading" constant="20" id="b5E-cd-Rj5"/>
                             <constraint firstItem="XmL-Pi-LG8" firstAttribute="leading" secondItem="Fry-kP-KsL" secondAttribute="leading" id="kqW-pE-A6d"/>
+                            <constraint firstItem="T0l-dc-aYG" firstAttribute="top" secondItem="sCA-u9-hAK" secondAttribute="top" id="n6k-J0-h4j"/>
                             <constraint firstItem="huQ-sh-buf" firstAttribute="top" secondItem="3AW-1c-VIp" secondAttribute="top" id="oIf-aO-tUh"/>
                             <constraint firstItem="XmL-Pi-LG8" firstAttribute="bottom" secondItem="8bC-Xf-vdC" secondAttribute="bottom" id="yV6-bO-H9b"/>
                             <constraint firstItem="Fry-kP-KsL" firstAttribute="bottom" secondItem="huQ-sh-buf" secondAttribute="bottom" constant="20" id="yaj-pa-MiR"/>
@@ -95,6 +111,7 @@
                     </view>
                     <connections>
                         <outlet property="expLabel" destination="ktG-bt-NT4" id="lFb-NY-RGj"/>
+                        <outlet property="focusModeLabel" destination="T0l-dc-aYG" id="jJK-PN-h95"/>
                         <outlet property="isoLabel" destination="sCA-u9-hAK" id="4Rs-lz-2dr"/>
                         <outlet property="photoButton" destination="huQ-sh-buf" id="xfx-9v-wPO"/>
                         <outlet property="previewView" destination="XmL-Pi-LG8" id="x2S-xK-VFQ"/>

@@ -25,18 +25,19 @@ class CamViewController: UIViewController {
     
     @IBOutlet weak var isoLabel: UILabel!
     @IBOutlet weak var expLabel: UILabel!
+    @IBOutlet weak var focusModeLabel: UILabel!
     @IBOutlet weak var settingsPage: UIButton!
     @IBOutlet weak var photoButton: UIButton!
+    
     @IBAction func capturePhoto(_ photoButton: UIButton) {
         if(SettingsController.settingsArray.count == 0) {
             CamViewController.count = 0;
             self.takePhoto()
         }
         else {
-            self.captureSettings(index: 0)
+            self.lockFocus()
         }
     }
-    
     
     //------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------MARK: View Controller Life Cycle-------------------------------------------------
@@ -145,6 +146,13 @@ class CamViewController: UIViewController {
         case configurationFailed
     }
     
+    private enum CaptureOption {
+        case lockExp
+        case lockFocus
+        case manual
+        case none
+    }
+    
     private let session = AVCaptureSession()
     
     private var isSessionRunning = false
@@ -152,6 +160,8 @@ class CamViewController: UIViewController {
     private let sessionQueue = DispatchQueue(label: "session queue")
     
     private var setupResult: SessionSetupResult = .success
+    
+    private var captureOp: CaptureOption = .none
     
     var videoDeviceInput: AVCaptureDeviceInput!
     
@@ -294,7 +304,7 @@ class CamViewController: UIViewController {
                 return
             }
             
-            let photoSettings = AVCapturePhotoSettings(rawPixelFormatType: rawFormatType)
+            let photoSettings = AVCapturePhotoSettings(rawPixelFormatType: rawFormatType,  processedFormat: [AVVideoCodecKey : AVVideoCodecType.jpeg])
             
             // MARK: Flash mode
             photoSettings.flashMode = .off
@@ -313,7 +323,7 @@ class CamViewController: UIViewController {
             }, completionHandler: { photoCaptureProcessor in
                 self.sessionQueue.async {
                     self.inProgressPhotoCaptureDelegates[photoCaptureProcessor.requestedPhotoSettings.uniqueID] = nil
-                    
+                    print("Finish \(CamViewController.count)\n")
                     //MARK: Repeated Capturing
                     if(CamViewController.settingCount < SettingsController.settingsArray.count) {
                         CamViewController.count += 1
@@ -354,10 +364,10 @@ class CamViewController: UIViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(sessionWasInterrupted), name: .AVCaptureSessionWasInterrupted, object: session)
         NotificationCenter.default.addObserver(self, selector: #selector(sessionInterruptionEnded), name: .AVCaptureSessionInterruptionEnded, object: session)
         
-        self.addObserver(self, forKeyPath: "captureDevice.lensPosition" , options: .new, context: nil)
+        self.addObserver(self, forKeyPath: "captureDevice.exposureMode" , options: .new, context: nil)
         self.addObserver(self, forKeyPath: "captureDevice.exposureDuration", options: .new, context: nil)
+        self.addObserver(self, forKeyPath: "captureDevice.focusMode", options: .new, context: nil)
         self.addObserver(self, forKeyPath: "captureDevice.ISO", options: .new, context: nil)
-        
     }
     
     private func removeObservers() {
@@ -366,21 +376,37 @@ class CamViewController: UIViewController {
             keyValueObservation.invalidate()
         }
         keyValueObservations.removeAll()
-        self.removeObserver(self, forKeyPath: "captureDevice.lensPosition")
+        self.removeObserver(self, forKeyPath: "captureDevice.exposureMode")
         self.removeObserver(self, forKeyPath: "captureDevice.exposureDuration")
         self.removeObserver(self, forKeyPath: "captureDevice.ISO")
+        self.removeObserver(self, forKeyPath: "captureDevice.focusMode")
     }
     
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
         
-        if keyPath == "captureDevice.lensPosition" {
+        if keyPath == "captureDevice.exposureMode" {
             //self.lensPosition.text = String(format: "%.1f", (self.videoDeviceInput.device.lensPosition)!)
-            //print("\(self.videoDeviceInput.device.lensPosition)")
+            let expMode = self.captureDevice?.exposureMode.rawValue
+            print("Exp Mode: \(expMode!)")
+            if(self.captureOp == .lockExp && expMode == 0) {
+                takePhoto()
+                self.captureOp = .none
+            }
         }
         
         if keyPath == "captureDevice.exposureDuration" {
             let exposureDurationSeconds = CMTimeGetSeconds((self.captureDevice?.exposureDuration)!)
             self.expLabel.text = String(format: "Exp: 1/%.f", 1.0 / exposureDurationSeconds)
+        }
+        
+        if keyPath == "captureDevice.focusMode" {
+            let focusModeVal = captureDevice?.focusMode.rawValue
+            self.focusModeLabel.text = String(format: "Focus: %d", focusModeVal!)
+            print("focus mode: \(focusModeVal!)")
+            if(focusModeVal == 0 && self.captureOp == .lockFocus) {
+                self.captureOp = .none
+                self.captureSettings(index: 0)
+            }
         }
         
         if keyPath == "captureDevice.ISO" {
@@ -437,12 +463,34 @@ class CamViewController: UIViewController {
         self.photoButton.isEnabled = true
     }
     
+    private func lockFocus() {
+        do {
+            try self.captureDevice?.lockForConfiguration()
+            self.captureOp = .lockFocus
+            self.captureDevice?.focusMode = .autoFocus
+            self.captureDevice?.unlockForConfiguration()
+        } catch let error {
+            print("Could not lock device for configuration: \(error)")
+        }
+    }
+    
+    private func lockExp() {
+        do {
+            try self.captureDevice?.lockForConfiguration()
+            self.captureOp = .lockExp
+            self.captureDevice?.exposureMode = .autoExpose
+            self.captureDevice?.unlockForConfiguration()
+        } catch let error {
+            print("Could not lock device for configuration: \(error)")
+        }
+    }
+    
     private func captureSettings(index: Int) {
         let currentSetting = SettingsController.settingsArray[index]
         
         if(CamViewController.count == 0) {
             if(currentSetting.auto) {
-                takePhotoWithAuto()
+                lockExp()
             } else {
                 takePhotoWithBothSet(time: currentSetting.exp, isoVal: currentSetting.iso)
             }
@@ -455,6 +503,7 @@ class CamViewController: UIViewController {
     private func takePhotoWithAuto() {
         do {
             try self.videoDeviceInput.device.lockForConfiguration()
+            captureDevice?.focusMode = .autoFocus
             captureDevice?.exposureMode = .autoExpose
             takePhoto()
             self.videoDeviceInput.device.unlockForConfiguration()
@@ -508,11 +557,11 @@ class CamViewController: UIViewController {
     private func printSettings(dev: AVCaptureDevice) {
         let iso = dev.iso
         let exposureDurationSeconds = CMTimeGetSeconds(dev.exposureDuration)
-        
         print(String(format: "printSettings - Iso: %.f", iso))
         print(String(format: "printSettings - ExpVal:  1/%.f", 1.0 / exposureDurationSeconds))
         print("printSettings - expCMTimeSec: \(exposureDurationSeconds)")
-        print("printSettings - device.exposureMode: \(dev.exposureMode.rawValue) (locked = 0, autoExpose = 1, continuousAutoExposure = 2, custom = 3)")
+        print("printSettings - exposureMode: \(dev.exposureMode.rawValue) (locked = 0, autoExpose = 1, continuousAutoExposure = 2, custom = 3)")
+        print("printSettings - focusMode: \(dev.focusMode.rawValue)")
         print("printSettings - Settings No. \(CamViewController.settingCount), Photo No. \(CamViewController.count)")
     }
     
