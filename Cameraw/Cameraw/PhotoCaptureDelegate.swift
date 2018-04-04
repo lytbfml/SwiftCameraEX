@@ -19,9 +19,11 @@ class PhotoCaptureProcessor: NSObject {
     
     private var rawPhotoData: Data?
     
-    private var photoDataJ: Data?
+    private var jpgPhotoData: Data?
     
-    private var dngFileUrl: URL?
+    var dngMeta: [String : Any]!
+    
+    var jpgMeta: [String : Any]!
 
     
     init(with requestedPhotoSettings: AVCapturePhotoSettings,
@@ -33,19 +35,43 @@ class PhotoCaptureProcessor: NSObject {
     }
     
     private func didFinish() {
-        if let dngPath = dngFileUrl?.path {
-            if FileManager.default.fileExists(atPath: dngPath) {
-                do {
-                    try FileManager.default.removeItem(atPath: dngPath)
-                } catch {
-                    print("Could not remove file at url: \(dngPath)")
-                }
-            } else {
-                print("not exist \(dngFileUrl?.path)")
-            }
-        }
         
         completionHandler(self)
+    }
+    
+    private func createScenUrl() -> URL {
+        let docPath = URL(fileURLWithPath: NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])
+        
+        let scenPath = docPath.appendingPathComponent("Scen_" + String(CamViewController.settingCount))
+        if (!FileManager.default.fileExists(atPath: scenPath.path)) {
+            print("Creating dir \(scenPath.path)")
+            do {
+                try FileManager.default.createDirectory(atPath: scenPath.path, withIntermediateDirectories: true, attributes: nil)
+            } catch let error {
+                print("Unable to create directory \(error)")
+            }
+        }
+        return scenPath
+    }
+    
+    private func createImgPath(scenPath: URL) -> String {
+        let date : Date = Date()
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd'_'HH_mm_ss"
+        dateFormatter.timeZone = TimeZone(abbreviation: "CDT")
+        let imageName = dateFormatter.string(from: date)
+        
+        return imageName
+    }
+    
+    private func exifEdit(metadataAttachments: [String: Any]) -> [String: Any] {
+        var tempData = metadataAttachments
+        if var exifData = tempData[kCGImagePropertyExifDictionary as String] as? [String: Any] {
+            exifData[kCGImagePropertyExifUserComment as String] = "<whatever you want to write>"
+            
+            tempData[kCGImagePropertyExifDictionary as String] = exifData as Dictionary
+        }
+        return tempData
     }
 }
 
@@ -61,20 +87,13 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
         if let error = error {
             print("Fail to capture photo: \(error)")
         } else {
-//            let photoMetadata = photo.metadata
-//            print("Metadata orientation ", photoMetadata[String(kCGImagePropertyOrientation)] as! CFNumber)
-//            print("Metadata: ", photoMetadata[String(kCGImagePropertyExifISOSpeedRatings)] as Any)
-            print(photo.isRawPhoto)
-            
             if(photo.isRawPhoto) {
-                rawPhotoData = photo.fileDataRepresentation()
+                dngMeta = exifEdit(metadataAttachments: photo.metadata as Dictionary)
+                rawPhotoData = photo.fileDataRepresentation(withReplacementMetadata: dngMeta, replacementEmbeddedThumbnailPhotoFormat: photo.embeddedThumbnailPhotoFormat, replacementEmbeddedThumbnailPixelBuffer: nil, replacementDepthData: photo.depthData)
+                
             } else{
-                photoDataJ = photo.fileDataRepresentation()
-//                let capturedImage = UIImage.init(data: photoDataJ!, scale: 1.0)
-//                if let imageD = capturedImage {
-//                    let imageJ = UIImageJPEGRepresentation(imageD, 1.0)
-//                    UIImageWriteToSavedPhotosAlbum(imageJ, nil, nil, nil)
-//                }
+                jpgMeta = exifEdit(metadataAttachments: photo.metadata as Dictionary)
+                jpgPhotoData = photo.fileDataRepresentation(withReplacementMetadata: jpgMeta, replacementEmbeddedThumbnailPhotoFormat: photo.embeddedThumbnailPhotoFormat, replacementEmbeddedThumbnailPixelBuffer: nil, replacementDepthData: photo.depthData)
             }
         }
     }
@@ -87,50 +106,78 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
             return
         }
         
-        guard let photoData = rawPhotoData else {
+        guard let rawPhotoData = rawPhotoData else {
             print("No photo data resource")
             didFinish()
             return
         }
         
-        guard let photoDataJ = photoDataJ else {
+        guard let jpgPhotoData = jpgPhotoData else {
             print("No photo JPEG data resource")
             didFinish()
             return
         }
         
-        let dngFileName = NSUUID().uuidString
-        let dngFilePath = (NSTemporaryDirectory() as NSString).appendingPathComponent((dngFileName as NSString).appendingPathExtension("DNG")!)
-        dngFileUrl = URL(fileURLWithPath: dngFilePath)
+        let scenPath = createScenUrl()
+        let imageName = createImgPath(scenPath: scenPath)
+        
+        print("ScenPath: \(scenPath)")
+        
+        let capturedImage = UIImage(data: jpgPhotoData)
+        let imageJ: Data = UIImageJPEGRepresentation(capturedImage!, 1.0)!
+        
+        let imgRef = CGImageSourceCreateWithData(imageJ as CFData, nil)!
+        let uti: CFString = CGImageSourceGetType(imgRef)!
+        print("img ref type: \(uti)")
+        let dataWithEXIF: NSMutableData = NSMutableData(data: imageJ)
+        let destination: CGImageDestination = CGImageDestinationCreateWithData(dataWithEXIF, uti, 1, nil)!
+        CGImageDestinationAddImageFromSource(destination, imgRef, 0, (jpgMeta as CFDictionary))
+        CGImageDestinationFinalize(destination)
+        
+        let jpgUrl = scenPath.appendingPathComponent(imageName).appendingPathExtension("JPG")
         do {
-            try photoData.write(to: dngFileUrl!, options: [])
+            try dataWithEXIF.write(to: jpgUrl, options: .atomic)
+        } catch let error {
+            print("Unable to write JPG file. Error \(error)")
+            didFinish()
+            return
+        }
+        
+        let dngUrl = scenPath.appendingPathComponent(imageName).appendingPathExtension("DNG")
+        do {
+            try rawPhotoData.write(to: dngUrl, options: .atomic)
         } catch let error as NSError {
             print("Unable to write DNG file. Error \(error)")
             didFinish()
             return
         }
         
-        PHPhotoLibrary.requestAuthorization { status in
-            if status == .authorized {
-                PHPhotoLibrary.shared().performChanges({
-                    let creationOptions = PHAssetResourceCreationOptions()
-                    let creationRequest = PHAssetCreationRequest.forAsset()
-                    creationOptions.uniformTypeIdentifier = self.requestedPhotoSettings.rawFileType.map { $0.rawValue }
-                    creationOptions.shouldMoveFile = true
-//                    let creationOptions2 = PHAssetResourceCreationOptions()
-//                    creationOptions2.uniformTypeIdentifier = self.requestedPhotoSettings.rawFileType.map{$0.rawValue}
-                    creationRequest.addResource(with: .photo, data: photoDataJ, options: nil)
-                    creationRequest.addResource(with: .alternatePhoto, fileURL: self.dngFileUrl!, options: creationOptions)
-                }, completionHandler: { _, error in
-                    if let error = error {
-                        print("Error occurered while saving photo to photo library: \(error)")
-                    }
-                    self.didFinish()
-                })
-            } else {
-                self.didFinish()
-            }
+        if (FileManager.default.fileExists(atPath: jpgUrl.path) && FileManager.default.fileExists(atPath: dngUrl.path)) {
+            print("success saving file")
+            didFinish()
         }
+        
+        
+//        PHPhotoLibrary.requestAuthorization { status in
+//            if status == .authorized {
+//                PHPhotoLibrary.shared().performChanges({
+//                    let creationOptions = PHAssetResourceCreationOptions()
+//                    let creationRequest = PHAssetCreationRequest.forAsset()
+//                    creationOptions.uniformTypeIdentifier = self.requestedPhotoSettings.rawFileType.map { $0.rawValue }
+//                    creationOptions.shouldMoveFile = true
+//                    creationRequest.addResource(with: .photo, fileURL: jpgUrl, options: nil)
+//
+//                    //creationRequest.addResource(with: .alternatePhoto, fileURL: self.dngFileUrl!, options: creationOptions)
+//                }, completionHandler: { _, error in
+//                    if let error = error {
+//                        print("Error occurered while saving photo to photo library: \(error)")
+//                    }
+//                    self.didFinish()
+//                })
+//            } else {
+//                self.didFinish()
+//            }
+//        }
     }
 }
 

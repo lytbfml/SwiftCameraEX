@@ -26,6 +26,7 @@ class CamViewController: UIViewController {
     @IBOutlet weak var isoLabel: UILabel!
     @IBOutlet weak var expLabel: UILabel!
     @IBOutlet weak var focusModeLabel: UILabel!
+    @IBOutlet weak var expmodeLabel: UILabel!
     @IBOutlet weak var settingsPage: UIButton!
     @IBOutlet weak var photoButton: UIButton!
     
@@ -236,56 +237,16 @@ class CamViewController: UIViewController {
         photoButton.layer.masksToBounds = false
         photoButton.layer.shadowRadius = 1.0
         photoButton.layer.shadowOpacity = 0.5
-        photoButton.layer.cornerRadius = photoButton.frame.width / 4
+        photoButton.layer.cornerRadius = photoButton.frame.width / 2
         
         settingsPage.layer.shadowColor = UIColor.black.cgColor
         settingsPage.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
         settingsPage.layer.masksToBounds = false
         settingsPage.layer.shadowRadius = 1.0
         settingsPage.layer.shadowOpacity = 0.5
-        settingsPage.layer.cornerRadius = settingsPage.frame.width / 4
+        settingsPage.layer.cornerRadius = settingsPage.frame.width / 5
     }
     
-    // MARK: Focus tap
-    @IBAction private func focusAndExposeTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        //let devicePoint = previewView.videoPreviewLayer.captureDevicePointConverted(fromLayerPoint: gestureRecognizer.location(in: gestureRecognizer.view))
-        //focus(with: .autoFocus, exposureMode: .autoExpose, at: devicePoint, monitorSubjectAreaChange: true)
-    }
-    
-    private func focus(with focusMode: AVCaptureDevice.FocusMode, exposureMode: AVCaptureDevice.ExposureMode, at devicePoint: CGPoint, monitorSubjectAreaChange: Bool) {
-        sessionQueue.async {
-            
-            let device = self.videoDeviceInput.device
-            do {
-                try device.lockForConfiguration()
-                
-                if device.isFocusPointOfInterestSupported && device.isFocusModeSupported(focusMode) {
-                    device.focusPointOfInterest = devicePoint
-                    device.focusMode = focusMode
-                }
-                if device.isExposurePointOfInterestSupported && device.isExposureModeSupported(exposureMode) {
-                    device.exposurePointOfInterest = devicePoint
-                    device.exposureMode = exposureMode
-                }
-                device.isSubjectAreaChangeMonitoringEnabled = monitorSubjectAreaChange
-                device.unlockForConfiguration()
-                
-                let exp = device.exposureDuration
-                let iso = device.iso
-                let expValInt = Int(1 / CMTimeGetSeconds(exp))
-              
-                DispatchQueue.main.async {
-                    self.isoLabel.text = String(iso)
-                    self.expLabel.text = "1/" + String(expValInt)
-                    self.isoLabel.isHidden = false
-                    self.expLabel.isHidden = false
-                    self.photoButton.isEnabled = true
-                }
-            } catch {
-                print("Could not lock device for configuration: \(error)")
-            }
-        }
-    }
     
     // MARK: Take photo
     private func takePhoto()
@@ -313,7 +274,6 @@ class CamViewController: UIViewController {
             
             let photoCaptureProcessor = PhotoCaptureProcessor(with: photoSettings, willCapturePhotoAnimation: {
                 // MARK: willCapturePhotoAnimation
-                print("willCapturePhotoAnimation")
 //                DispatchQueue.main.async {
 //                    self.previewView.videoPreviewLayer.opacity = 0
 //                    UIView.animate(withDuration: 0.25) {
@@ -385,10 +345,9 @@ class CamViewController: UIViewController {
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
         
         if keyPath == "captureDevice.exposureMode" {
-            //self.lensPosition.text = String(format: "%.1f", (self.videoDeviceInput.device.lensPosition)!)
-            let expMode = self.captureDevice?.exposureMode.rawValue
-            print("Exp Mode: \(expMode!)")
-            if(self.captureOp == .lockExp && expMode == 0) {
+            let expModeVal = self.captureDevice?.exposureMode.rawValue
+            self.expmodeLabel.text = String(format: "ExpMode: %d", expModeVal!)
+            if(self.captureOp == .lockExp && expModeVal == 0) {
                 takePhoto()
                 self.captureOp = .none
             }
@@ -402,7 +361,6 @@ class CamViewController: UIViewController {
         if keyPath == "captureDevice.focusMode" {
             let focusModeVal = captureDevice?.focusMode.rawValue
             self.focusModeLabel.text = String(format: "Focus: %d", focusModeVal!)
-            print("focus mode: \(focusModeVal!)")
             if(focusModeVal == 0 && self.captureOp == .lockFocus) {
                 self.captureOp = .none
                 self.captureSettings(index: 0)
@@ -416,8 +374,8 @@ class CamViewController: UIViewController {
     
     @objc
     func subjectAreaDidChange(notification: NSNotification) {
-        let devicePoint = CGPoint(x: 0.5, y: 0.5)
-        focus(with: .continuousAutoFocus, exposureMode: .continuousAutoExposure, at: devicePoint, monitorSubjectAreaChange: false)
+        //let devicePoint = CGPoint(x: 0.5, y: 0.5)
+        //focus(with: .continuousAutoFocus, exposureMode: .continuousAutoExposure, at: devicePoint, monitorSubjectAreaChange: false)
         fatalError("------subjectAreaDidChange------")
     }
     

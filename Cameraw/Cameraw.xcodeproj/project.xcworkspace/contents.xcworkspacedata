@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "self:Cameraw.xcodeproj">
+      location = "group:/Users/jlnewman/Documents/IOS_DEV/SwiftCameraEX/Cameraw/Cameraw/Assets.xcassets">
+   </FileRef>
+   <FileRef
+      location = "self:">
    </FileRef>
 </Workspace>
