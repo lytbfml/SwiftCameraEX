@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Cameraw.ipa</key>
+	<array>
+		<dict>
+			<key>architectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>certificate</key>
+			<dict>
+				<key>SHA1</key>
+				<string>C7939525E85FD895A777FC4331176CC46A30ADC9</string>
+				<key>dateExpires</key>
+				<string>3/4/19</string>
+				<key>type</key>
+				<string>iOS Distribution</string>
+			</dict>
+			<key>entitlements</key>
+			<dict>
+				<key>application-identifier</key>
+				<string>MX32H8HK28.com.yangxiao.Cameraw</string>
+				<key>com.apple.developer.team-identifier</key>
+				<string>MX32H8HK28</string>
+				<key>get-task-allow</key>
+				<false/>
+				<key>keychain-access-groups</key>
+				<array>
+					<string>MX32H8HK28.com.yangxiao.Cameraw</string>
+				</array>
+			</dict>
+			<key>name</key>
+			<string>Cameraw.app</string>
+			<key>profile</key>
+			<dict>
+				<key>UUID</key>
+				<string>fd569b69-21c7-4da7-8b99-b1b59eb6dcca</string>
+				<key>name</key>
+				<string>iOS Team Ad Hoc Provisioning Profile: com.yangxiao.Cameraw</string>
+			</dict>
+			<key>team</key>
+			<dict>
+				<key>id</key>
+				<string>MX32H8HK28</string>
+				<key>name</key>
+				<string>Yangxiao Wang</string>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>

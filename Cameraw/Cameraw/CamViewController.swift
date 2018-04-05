@@ -256,7 +256,8 @@ class CamViewController: UIViewController {
             if let photoOutputConnection = self.photoOutput.connection(with: .video) {
                 photoOutputConnection.videoOrientation = videoPreviewLayerOrientation!
             }
-            let device = self.videoDeviceInput.device
+            let device = self.captureDevice!
+            
             self.printSettings(dev: device);
             
             let rawFormatType = kCVPixelFormatType_14Bayer_RGGB
@@ -272,7 +273,7 @@ class CamViewController: UIViewController {
             photoSettings.isAutoStillImageStabilizationEnabled = false
             photoSettings.isHighResolutionPhotoEnabled = true
             
-            let photoCaptureProcessor = PhotoCaptureProcessor(with: photoSettings, willCapturePhotoAnimation: {
+            let photoCaptureProcessor = PhotoCaptureProcessor(with: photoSettings, use: device, willCapturePhotoAnimation: {
                 // MARK: willCapturePhotoAnimation
 //                DispatchQueue.main.async {
 //                    self.previewView.videoPreviewLayer.opacity = 0
