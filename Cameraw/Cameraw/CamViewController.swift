@@ -12,8 +12,24 @@ import Photos
 
 class CamViewController: UIViewController {
     
-    static var count = 0
-    static var settingCount = 0;
+    static let deviceID: String = UIDevice.current.identifierForVendor!.uuidString + "_"
+    
+    var currentSettingIndex = 0
+    var settingIndex = 0
+    var currentPhotoCount: Int = 0 {
+        didSet {
+            let fractionalProgress = Float(currentPhotoCount) / allPhotoNumsInCurrentSetting
+            let animated = currentPhotoCount != 0
+            DispatchQueue.main.async {
+                self.captureProgress.setProgress(fractionalProgress, animated: animated)
+            }
+        }
+    }
+    
+    static var currentTimestamp: String!
+    static var currentScenName: String!
+    
+    private var allPhotoNumsInCurrentSetting: Float!
     
     private let photoOutput = AVCapturePhotoOutput()
     
@@ -23,21 +39,63 @@ class CamViewController: UIViewController {
     
     @objc var captureDevice: AVCaptureDevice?
     
+    var videoDeviceInput: AVCaptureDeviceInput!
+    
+    private let session = AVCaptureSession()
+    
+    private var isSessionRunning = false
+    
+    private let sessionQueue = DispatchQueue(label: "session queue")
+    
+    private enum SessionSetupResult {
+        case success
+        case notAuthorized
+        case configurationFailed
+    }
+    
+    private enum CaptureOption {
+        case lockExp
+        case lockFocus
+        case manual
+        case none
+    }
+    
+    public enum WorkingMode {
+        case manualCapture
+        case aeCapture
+        case none
+    }
+    
+    private var setupResult: SessionSetupResult = .success
+    
+    private var captureOp: CaptureOption = .none
+    
+    private var workMode: WorkingMode = .aeCapture
+    
+    @IBOutlet weak var previewView: PreviewView!
+    
+    @IBOutlet weak var statusView: UIView!
+    @IBOutlet weak var statusLabel: UILabel!
+    @IBOutlet weak var statusValue: UILabel!
     @IBOutlet weak var isoLabel: UILabel!
     @IBOutlet weak var expLabel: UILabel!
-    @IBOutlet weak var focusModeLabel: UILabel!
-    @IBOutlet weak var expmodeLabel: UILabel!
+    @IBOutlet weak var modeLabel: UILabel!
+    
     @IBOutlet weak var settingsPage: UIButton!
     @IBOutlet weak var photoButton: UIButton!
+    @IBOutlet weak var cleanButton: UIButton!
+    
+    @IBOutlet weak var captureStatusView: UIView!
+    @IBOutlet weak var captureMsg: UILabel!
+    @IBOutlet weak var captureProgress: UIProgressView!
+    
+    @IBAction func cleanBtnPressed(_ sender: Any) {
+        self.clearAllFilesFromDocDirectory()
+    }
     
     @IBAction func capturePhoto(_ photoButton: UIButton) {
-        if(SettingsController.settingsArray.count == 0) {
-            CamViewController.count = 0;
-            self.takePhoto()
-        }
-        else {
-            self.lockFocus()
-        }
+        
+        readyForCapture(mode: workMode)
     }
     
     //------------------------------------------------------------------------------------------------------------------------------
@@ -141,33 +199,6 @@ class CamViewController: UIViewController {
         super.didReceiveMemoryWarning()
     }
     
-    private enum SessionSetupResult {
-        case success
-        case notAuthorized
-        case configurationFailed
-    }
-    
-    private enum CaptureOption {
-        case lockExp
-        case lockFocus
-        case manual
-        case none
-    }
-    
-    private let session = AVCaptureSession()
-    
-    private var isSessionRunning = false
-    
-    private let sessionQueue = DispatchQueue(label: "session queue")
-    
-    private var setupResult: SessionSetupResult = .success
-    
-    private var captureOp: CaptureOption = .none
-    
-    var videoDeviceInput: AVCaptureDeviceInput!
-    
-    @IBOutlet weak var previewView: PreviewView!
-    
     private func configureSession() {
         if setupResult != .success {
             return
@@ -245,6 +276,16 @@ class CamViewController: UIViewController {
         settingsPage.layer.shadowRadius = 1.0
         settingsPage.layer.shadowOpacity = 0.5
         settingsPage.layer.cornerRadius = settingsPage.frame.width / 5
+        
+        cleanButton.layer.shadowColor = UIColor.black.cgColor
+        cleanButton.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
+        cleanButton.layer.masksToBounds = false
+        cleanButton.layer.shadowRadius = 1.0
+        cleanButton.layer.shadowOpacity = 0.5
+        cleanButton.layer.cornerRadius = cleanButton.frame.width / 5
+        
+        statusLabel.lineBreakMode = .byWordWrapping
+        statusLabel.text = "AF/AE/AWB Mode:\nISO:\nEXP:\nCapture Status:"
     }
     
     
@@ -273,8 +314,7 @@ class CamViewController: UIViewController {
             photoSettings.isAutoStillImageStabilizationEnabled = false
             photoSettings.isHighResolutionPhotoEnabled = true
             
-            let photoCaptureProcessor = PhotoCaptureProcessor(with: photoSettings, use: device, willCapturePhotoAnimation: {
-                // MARK: willCapturePhotoAnimation
+            let photoCaptureProcessor = PhotoCaptureProcessor(with: photoSettings, device: device, photoCount: self.currentPhotoCount, willCapturePhotoAnimation: {
 //                DispatchQueue.main.async {
 //                    self.previewView.videoPreviewLayer.opacity = 0
 //                    UIView.animate(withDuration: 0.25) {
@@ -284,29 +324,92 @@ class CamViewController: UIViewController {
             }, completionHandler: { photoCaptureProcessor in
                 self.sessionQueue.async {
                     self.inProgressPhotoCaptureDelegates[photoCaptureProcessor.requestedPhotoSettings.uniqueID] = nil
-                    print("Finish \(CamViewController.count)\n")
-                    //MARK: Repeated Capturing
-                    if(CamViewController.settingCount < SettingsController.settingsArray.count) {
-                        CamViewController.count += 1
-                        if(CamViewController.count >= SettingsController.settingsArray[CamViewController.settingCount].num) {
-                            CamViewController.settingCount += 1
-                            CamViewController.count = 0
-                        }
-                        if(CamViewController.settingCount < SettingsController.settingsArray.count) {
-                            self.captureSettings(index: CamViewController.settingCount)
-                        }
-                        else {
-                            CamViewController.count = 0
-                            CamViewController.settingCount = 0
-                            let alert = UIAlertController(title: "Complete!", message: "", preferredStyle: UIAlertControllerStyle.alert)
-                            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
-                            self.present(alert, animated: true, completion: nil)
-                        }
-                    }
+                    print("Finish \(self.currentPhotoCount)\n")
+                    self.onCaptureSettingComplete()
                 }
             })
             self.inProgressPhotoCaptureDelegates[photoCaptureProcessor.requestedPhotoSettings.uniqueID] = photoCaptureProcessor
             self.photoOutput.capturePhoto(with: photoSettings, delegate: photoCaptureProcessor)
+        }
+    }
+    
+    private func lockFocus() {
+        do {
+            try captureDevice?.lockForConfiguration()
+            captureOp = .lockFocus
+            captureDevice?.focusMode = .autoFocus
+            captureDevice?.unlockForConfiguration()
+        } catch let error {
+            print("Could not lock device for configuration: \(error)")
+        }
+    }
+    
+    private func onFocusComplete() {
+        if(workMode == .manualCapture) {
+            captureSettings(index: 0)
+        } else if (workMode == .aeCapture) {
+            lockExp()
+        }
+    }
+    
+    private func lockExp() {
+        do {
+            try captureDevice?.lockForConfiguration()
+            captureOp = .lockExp
+            captureDevice?.exposureMode = .autoExpose
+            captureDevice?.unlockForConfiguration()
+        } catch let error {
+            print("Could not lock device for configuration: \(error)")
+        }
+    }
+    
+    private func onLockExpComplete() {
+        if(workMode == .manualCapture) {
+            takePhoto()
+        } else if (workMode == .aeCapture) {
+            let isoI: Float! = captureDevice?.iso
+            let expI: Float64! = CMTimeGetSeconds((captureDevice?.exposureDuration)!)
+            let isoMax: Float = isoI * 3
+            let isoMin: Float = isoI / 2
+            let isoMean: Float = (isoMax + isoMin) / 2
+            let expMax: Float64 = expI * 2
+            let expMin: Float64 = expI / 2
+            let expMean: Float64 = (expMax + expMin) / 2
+
+            SettingsController.settingsArray.append(SettingObj(iso: isoMin, exp: expMin, num: 1))
+            SettingsController.settingsArray.append(SettingObj(iso: isoMin, exp: expMean, num: 1))
+            SettingsController.settingsArray.append(SettingObj(iso: isoMin, exp: expMax, num: 1))
+            SettingsController.settingsArray.append(SettingObj(iso: isoMean, exp: expMin, num: 1))
+            SettingsController.settingsArray.append(SettingObj(iso: isoMean, exp: expMean, num: 1))
+            SettingsController.settingsArray.append(SettingObj(iso: isoMean, exp: expMax, num: 1))
+            SettingsController.settingsArray.append(SettingObj(iso: isoMax, exp: expMin, num: 1))
+            SettingsController.settingsArray.append(SettingObj(iso: isoMax, exp: expMean, num: 1))
+            SettingsController.settingsArray.append(SettingObj(iso: isoMax, exp: expMax, num: 1))
+            captureSettings(index: 0)
+        }
+    }
+    
+    private func readyForCapture(mode: WorkingMode) {
+        DispatchQueue.main.async {
+            self.captureStatusView.isHidden = false
+            self.captureMsg.text = "Getting Ready..."
+            self.captureMsg.isHidden = false
+        }
+        
+        if (mode == .manualCapture) {
+            workMode = .manualCapture
+            if(SettingsController.settingsArray.count == 0) {
+                SettingsController.settingsArray.append(SettingObj(num: 1))
+                self.lockFocus()
+            }
+            else {
+                self.lockFocus()
+            }
+        } else if (mode == .aeCapture) {
+            workMode = .aeCapture
+            SettingsController.settingsArray.removeAll()
+            SettingsController.settingsArray.append(SettingObj(num: 1))
+            self.lockFocus()
         }
     }
     
@@ -315,6 +418,7 @@ class CamViewController: UIViewController {
             guard let isSessionRunning = change.newValue else { return }
             DispatchQueue.main.async {
                 self.photoButton.isEnabled = isSessionRunning
+                self.statusValue.text = self.getStatusValue()
             }
         }
         keyValueObservations.append(keyValueObservation)
@@ -327,6 +431,7 @@ class CamViewController: UIViewController {
         
         self.addObserver(self, forKeyPath: "captureDevice.exposureMode" , options: .new, context: nil)
         self.addObserver(self, forKeyPath: "captureDevice.exposureDuration", options: .new, context: nil)
+        self.addObserver(self, forKeyPath: "captureDevice.whiteBalanceMode", options: .new, context: nil)
         self.addObserver(self, forKeyPath: "captureDevice.focusMode", options: .new, context: nil)
         self.addObserver(self, forKeyPath: "captureDevice.ISO", options: .new, context: nil)
     }
@@ -339,6 +444,7 @@ class CamViewController: UIViewController {
         keyValueObservations.removeAll()
         self.removeObserver(self, forKeyPath: "captureDevice.exposureMode")
         self.removeObserver(self, forKeyPath: "captureDevice.exposureDuration")
+        self.removeObserver(self, forKeyPath: "captureDevice.whiteBalanceMode")
         self.removeObserver(self, forKeyPath: "captureDevice.ISO")
         self.removeObserver(self, forKeyPath: "captureDevice.focusMode")
     }
@@ -346,30 +452,38 @@ class CamViewController: UIViewController {
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
         
         if keyPath == "captureDevice.exposureMode" {
-            let expModeVal = self.captureDevice?.exposureMode.rawValue
-            self.expmodeLabel.text = String(format: "ExpMode: %d", expModeVal!)
+            let expModeVal = captureDevice?.exposureMode.rawValue
+            DispatchQueue.main.async {
+                self.statusValue.text = self.getStatusValue()
+            }
             if(self.captureOp == .lockExp && expModeVal == 0) {
-                takePhoto()
                 self.captureOp = .none
+                onLockExpComplete()
             }
         }
         
         if keyPath == "captureDevice.exposureDuration" {
             let exposureDurationSeconds = CMTimeGetSeconds((self.captureDevice?.exposureDuration)!)
-            self.expLabel.text = String(format: "Exp: 1/%.f", 1.0 / exposureDurationSeconds)
+            DispatchQueue.main.async {
+                self.expLabel.text = String(format: "1/%.f", 1.0 / exposureDurationSeconds)
+            }
         }
         
         if keyPath == "captureDevice.focusMode" {
             let focusModeVal = captureDevice?.focusMode.rawValue
-            self.focusModeLabel.text = String(format: "Focus: %d", focusModeVal!)
+            DispatchQueue.main.async {
+                self.statusValue.text = self.getStatusValue()
+            }
             if(focusModeVal == 0 && self.captureOp == .lockFocus) {
                 self.captureOp = .none
-                self.captureSettings(index: 0)
+                onFocusComplete()
             }
         }
         
         if keyPath == "captureDevice.ISO" {
-            self.isoLabel.text = String(format: "Iso: %.f", (self.captureDevice?.iso)!)
+            DispatchQueue.main.async {
+                self.isoLabel.text = String(format: "%.f", (self.captureDevice?.iso)!)
+            }
         }
     }
     
@@ -410,53 +524,125 @@ class CamViewController: UIViewController {
         print("Capture session interruption ended")
     }
     
+    private func clearAllFilesFromDocDirectory(){
+        let fileManager = FileManager.default
+        let docPath = URL(fileURLWithPath: NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])
+        do {
+            let filePaths = try fileManager.contentsOfDirectory(atPath: docPath.path)
+            for filePath in filePaths {
+                try fileManager.removeItem(at: docPath.appendingPathComponent(filePath))
+            }
+            let alert = UIAlertController(title: "Complete!", message: "All files removed", preferredStyle: UIAlertControllerStyle.alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+            self.present(alert, animated: true, completion: nil)
+        } catch {
+            print("Could not clear temp folder: \(error)")
+        }
+    }
+    
     //------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------------Helper Method--------------------------------------------------------------
     //------------------------------------------------------------------------------------------------------------------------------
     
-    private func setLabel(iso: Float, exposureDurationSeconds: Float64) {
-        self.isoLabel.text = String(format: "Iso: %.f", iso)
-        self.expLabel.text = String(format: "Exp: 1/%.f", 1.0 / exposureDurationSeconds)
-        self.isoLabel.isHidden = false
-        self.expLabel.isHidden = false
-        self.photoButton.isEnabled = true
-    }
-    
-    private func lockFocus() {
-        do {
-            try self.captureDevice?.lockForConfiguration()
-            self.captureOp = .lockFocus
-            self.captureDevice?.focusMode = .autoFocus
-            self.captureDevice?.unlockForConfiguration()
-        } catch let error {
-            print("Could not lock device for configuration: \(error)")
-        }
-    }
-    
-    private func lockExp() {
-        do {
-            try self.captureDevice?.lockForConfiguration()
-            self.captureOp = .lockExp
-            self.captureDevice?.exposureMode = .autoExpose
-            self.captureDevice?.unlockForConfiguration()
-        } catch let error {
-            print("Could not lock device for configuration: \(error)")
-        }
-    }
-    
     private func captureSettings(index: Int) {
+        if(index == 0 && currentSettingIndex == 0) {
+            
+            
+            CamViewController.currentTimestamp = getTimestamp()
+            CamViewController.currentScenName = createScenName()
+            var count = 0
+            for tempObj in SettingsController.settingsArray {
+                count += tempObj.num
+            }
+            allPhotoNumsInCurrentSetting = Float(count)
+            currentPhotoCount = 0
+            DispatchQueue.main.async {
+                self.captureMsg.text = "Capture In Progress"
+                self.captureProgress.isHidden = false
+            }
+        }
+        
         let currentSetting = SettingsController.settingsArray[index]
         
-        if(CamViewController.count == 0) {
-            if(currentSetting.auto) {
+        if(currentSettingIndex == 0) {
+            if(currentSetting.auto && workMode == .manualCapture) {
                 lockExp()
+            } else if (currentSetting.auto && workMode == .aeCapture) {
+                takePhoto()
             } else {
                 takePhotoWithBothSet(time: currentSetting.exp, isoVal: currentSetting.iso)
             }
         }
-        else if(CamViewController.count < currentSetting.num) {
+        else if(currentSettingIndex < currentSetting.num) {
             takePhoto()
         }
+    }
+    
+    private func onCaptureSettingComplete() {
+        //MARK: Repeated Capturing
+        currentPhotoCount += 1
+        if(settingIndex < SettingsController.settingsArray.count) {
+            currentSettingIndex += 1
+            if(currentSettingIndex >= SettingsController.settingsArray[settingIndex].num) {
+                settingIndex += 1
+                currentSettingIndex = 0
+            }
+            if(settingIndex < SettingsController.settingsArray.count) {
+                self.captureSettings(index: settingIndex)
+            }
+            else {
+                onAllSettingComplete()
+            }
+        }
+    }
+    
+    private func onAllSettingComplete() {
+        DispatchQueue.main.async {
+            self.captureStatusView.isHidden = true
+        }
+        currentSettingIndex = 0
+        settingIndex = 0
+        currentPhotoCount = 0
+        let alert = UIAlertController(title: "Capture complete. Please confirm the following:", message: "During the capture session,\n1.the device camera did not move\n2.the scene content remained the same\n\nClick 'Confirm' to choose scene label, or 'Discard' to discard the current scene images.", preferredStyle: UIAlertControllerStyle.alert)
+        alert.addAction(UIAlertAction(title: "Confirm", style: .default, handler: { (action) in
+            let actSheet = UIAlertController(title: "Choose scene label", message: "", preferredStyle: .actionSheet)
+            actSheet.addAction(UIAlertAction(title: "No label", style: .default, handler: nil))
+            actSheet.addAction(UIAlertAction(title: "Books", style: .default, handler: { (action) in
+                self.renameCurrentScene(label: "Books")
+            }))
+            actSheet.addAction(UIAlertAction(title: "Apple(s)", style: .default, handler: { (action) in
+                
+            }))
+            actSheet.addAction(UIAlertAction(title: "Orange(s)", style: .default, handler: { (action) in
+                
+            }))
+            actSheet.addAction(UIAlertAction(title: "Chair(s)", style: .default, handler: { (action) in
+                
+            }))
+            actSheet.addAction(UIAlertAction(title: "Stairs/Stairwell", style: .default, handler: { (action) in
+                
+            }))
+            actSheet.addAction(UIAlertAction(title: "Backpack", style: .default, handler: { (action) in
+                
+            }))
+            actSheet.addAction(UIAlertAction(title: "Clock", style: .default, handler: { (action) in
+                
+            }))
+            actSheet.addAction(UIAlertAction(title: "Keyboard", style: .default, handler: { (action) in
+                
+            }))
+            actSheet.addAction(UIAlertAction(title: "Water bottle", style: .default, handler: { (action) in
+                
+            }))
+            actSheet.addAction(UIAlertAction(title: "Keys", style: .default, handler: { (action) in
+                
+            }))
+            self.present(actSheet, animated: true, completion: nil)
+        }))
+        alert.addAction(UIAlertAction(title: "Discard", style: .destructive, handler: { (action) in
+            self.removeCurrentScene()
+        }))
+        self.present(alert, animated: true, completion: nil)
     }
     
     private func takePhotoWithAuto() {
@@ -473,11 +659,11 @@ class CamViewController: UIViewController {
     
     private func takePhotoWithBothSet(time: Float64, isoVal: Float) {
         do {
-            try self.captureDevice?.lockForConfiguration()
-            self.captureDevice?.setExposureModeCustom(duration: CMTimeMakeWithSeconds(time, 1000*1000*1000), iso: isoVal, completionHandler: { (time) -> Void in
+            try captureDevice?.lockForConfiguration()
+            captureDevice?.setExposureModeCustom(duration: CMTimeMakeWithSeconds(time, 1000*1000*1000), iso: isoVal, completionHandler: { (time) -> Void in
                 self.takePhoto()
             })
-            self.captureDevice?.unlockForConfiguration()
+            captureDevice?.unlockForConfiguration()
         } catch let error {
             print("Could not lock device for configuration: \(error)")
         }
@@ -485,32 +671,132 @@ class CamViewController: UIViewController {
     
     private func takePhotoWithExpSet(time: Float64) {
         do {
-            try self.videoDeviceInput.device.lockForConfiguration()
-            self.videoDeviceInput.device.setExposureModeCustom(duration: CMTimeMakeWithSeconds(time, 1000*1000*1000), iso: AVCaptureDevice.currentISO, completionHandler: { (time) -> Void in
+            try captureDevice?.lockForConfiguration()
+            captureDevice?.setExposureModeCustom(duration: CMTimeMakeWithSeconds(time, 1000*1000*1000), iso: AVCaptureDevice.currentISO, completionHandler: { (time) -> Void in
                 self.takePhoto()
             })
-            self.videoDeviceInput.device.unlockForConfiguration()
+            captureDevice?.unlockForConfiguration()
         } catch let error {
             print("Could not lock device for configuration: \(error)")
         }
     }
     
     private func takePotoWithIsoSet(isoVal: Float) {
-        let devISO = getCurrentISO(dev: self.videoDeviceInput.device)
-        print("SetISO - deviso: \(devISO), setting iso: \(isoVal)")
         do {
-            try self.videoDeviceInput.device.lockForConfiguration()
-            self.videoDeviceInput.device.setExposureModeCustom(duration: AVCaptureDevice.currentExposureDuration, iso: isoVal, completionHandler: { (time) -> Void in
+            try captureDevice?.lockForConfiguration()
+            captureDevice?.setExposureModeCustom(duration: AVCaptureDevice.currentExposureDuration, iso: isoVal, completionHandler: { (time) -> Void in
                 self.takePhoto()
             })
-            self.videoDeviceInput.device.unlockForConfiguration()
+            captureDevice?.unlockForConfiguration()
         } catch let error {
             print("Could not lock device for configuration: \(error)")
         }
     }
     
-    private func getCurrentISO(dev: AVCaptureDevice) -> Float {
-        return dev.iso
+    private func getTimestamp() -> String {
+        let date : Date = Date()
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd'-'HHmmss"
+        dateFormatter.timeZone = TimeZone(abbreviation: "CDT")
+        let timestamp = dateFormatter.string(from: date)
+        return timestamp
+    }
+    
+    private func createScenName() -> String {
+        let docPath = URL(fileURLWithPath: NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])
+        do {
+            let files = try FileManager.default.contentsOfDirectory(atPath: docPath.path)
+            let count = files.count / 2 + 1
+            var scenCount: String
+            if(count < 10) {
+                scenCount = "00" + String(count)
+            } else if (count < 100){
+                scenCount = "0" + String(count)
+            } else{
+                scenCount = String(count)
+            }
+            let scenName: String = "Scene-" + scenCount
+            
+            return scenName
+        } catch let error {
+            fatalError("Unable to count directory \(error)")
+        }
+    }
+    
+    private func renameCurrentScene(label: String) {
+        let fileManager = FileManager.default
+        let docPath = URL(fileURLWithPath: NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])
+        let scenPath1 = docPath.appendingPathComponent(CamViewController.currentScenName + "_JPG_" + CamViewController.currentTimestamp)
+        let scenPath2 = docPath.appendingPathComponent(CamViewController.currentScenName + "_DNG_" + CamViewController.currentTimestamp)
+        let scenDes1 = docPath.appendingPathComponent(CamViewController.currentScenName + "_JPG_" + CamViewController.currentTimestamp + "_" + label)
+        let scenDes2 = docPath.appendingPathComponent(CamViewController.currentScenName + "_DNG_" + CamViewController.currentTimestamp + "_" + label)
+        do {
+            try fileManager.moveItem(at: scenPath1, to: scenDes1)
+            try fileManager.moveItem(at: scenPath2, to: scenDes2)
+        } catch {
+            print("Could not clear temp folder: \(error)")
+        }
+    }
+    
+    private func removeCurrentScene() {
+        let fileManager = FileManager.default
+        let docPath = URL(fileURLWithPath: NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])
+        let scenPath1 = docPath.appendingPathComponent(CamViewController.currentScenName + "_JPG_" + CamViewController.currentTimestamp)
+        let scenPath2 = docPath.appendingPathComponent(CamViewController.currentScenName + "_DNG_" + CamViewController.currentTimestamp)
+        
+        do {
+            try fileManager.removeItem(at: scenPath1)
+            try fileManager.removeItem(at: scenPath2)
+            let alert2 = UIAlertController(title: "Complete!", message: "Scene discard", preferredStyle: UIAlertControllerStyle.alert)
+            alert2.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+            self.present(alert2, animated: true, completion: nil)
+        } catch {
+            print("Could not clear temp folder: \(error)")
+        }
+    }
+    
+    private func getStatusValue() -> String {
+        let expModeVal = captureDevice?.exposureMode.rawValue
+        var expValName: String
+        switch expModeVal {
+        case 0:
+            expValName = "locked"
+        case 1:
+            expValName = "auto"
+        case 2:
+            expValName = "cont_auto"
+        case 3:
+            expValName = "custom"
+        default:
+            expValName = "unknown"
+        }
+        let focusModeVal = captureDevice?.focusMode.rawValue
+        var focusModeName: String
+        switch focusModeVal {
+        case 0:
+            focusModeName = "locked"
+        case 1:
+            focusModeName = "auto"
+        case 2:
+            focusModeName = "cont_auto"
+        default:
+            focusModeName = "unknown"
+        }
+        let wbModeVal = captureDevice?.whiteBalanceMode.rawValue
+        var wbModeName: String
+        switch wbModeVal {
+        case 0:
+            wbModeName = "locked"
+        case 1:
+            wbModeName = "auto"
+        case 2:
+            wbModeName = "cont_auto"
+        default:
+            wbModeName = "unknown"
+        }
+        let statusVal = focusModeName + "/" + expValName + "/" + wbModeName
+        
+        return statusVal
     }
     
     private func printSettings(dev: AVCaptureDevice) {
@@ -521,9 +807,8 @@ class CamViewController: UIViewController {
         print("printSettings - expCMTimeSec: \(exposureDurationSeconds)")
         print("printSettings - exposureMode: \(dev.exposureMode.rawValue) (locked = 0, autoExpose = 1, continuousAutoExposure = 2, custom = 3)")
         print("printSettings - focusMode: \(dev.focusMode.rawValue)")
-        print("printSettings - Settings No. \(CamViewController.settingCount), Photo No. \(CamViewController.count)")
+        print("printSettings - Settings No. \(settingIndex), Photo No. \(currentSettingIndex)")
     }
-    
 }
 
 extension AVCaptureVideoOrientation {

@@ -23,30 +23,35 @@ class PhotoCaptureProcessor: NSObject {
     
     private var jpgPhotoData: Data?
     
+    private var photoCount: Int!
+    
     var dngMeta: [String : Any]!
     
     var jpgMeta: [String : Any]!
+    
+    private var currentIso: String
+    private var currentExp: String
 
     
-    init(with requestedPhotoSettings: AVCapturePhotoSettings,
-         use device: AVCaptureDevice,
-         willCapturePhotoAnimation: @escaping () -> Void,
-         completionHandler: @escaping (PhotoCaptureProcessor) -> Void) {
+    init(with requestedPhotoSettings: AVCapturePhotoSettings, device: AVCaptureDevice, photoCount: Int, willCapturePhotoAnimation: @escaping () -> Void, completionHandler: @escaping (PhotoCaptureProcessor) -> Void) {
         self.requestedPhotoSettings = requestedPhotoSettings
         self.device = device
         self.willCapturePhotoAnimation = willCapturePhotoAnimation
         self.completionHandler = completionHandler
+        self.currentExp = String(format: "%.f ", 1.0 / CMTimeGetSeconds(device.exposureDuration))
+        self.currentIso = String(Int(device.iso))
+        self.photoCount = photoCount
     }
     
     private func didFinish() {
-        
         completionHandler(self)
     }
     
-    private func createScenUrl() -> URL {
+    
+    private func createScenUrl(format: String) -> URL {
         let docPath = URL(fileURLWithPath: NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])
         
-        let scenPath = docPath.appendingPathComponent("Scen_" + String(CamViewController.settingCount))
+        let scenPath = docPath.appendingPathComponent(CamViewController.currentScenName + "_" + format + "_" + CamViewController.currentTimestamp)
         if (!FileManager.default.fileExists(atPath: scenPath.path)) {
             print("Creating dir \(scenPath.path)")
             do {
@@ -58,21 +63,28 @@ class PhotoCaptureProcessor: NSObject {
         return scenPath
     }
     
-    private func createImgPath(scenPath: URL) -> String {
-        let date : Date = Date()
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd'_'HH_mm_ss"
-        dateFormatter.timeZone = TimeZone(abbreviation: "CDT")
-        let imageName = dateFormatter.string(from: date)
+    
+    private func createImgPath(scenPath: URL, format: String) -> String {
+        let count = self.photoCount + 1
+        var photoCount: String
+        if(count < 10) {
+            photoCount = "00" + String(count)
+        } else if (count < 100){
+            photoCount = "0" + String(count)
+        } else{
+            photoCount = String(count)
+        }
+        var imageName: String = CamViewController.deviceID + CamViewController.currentScenName + "_" + format + "-"
+        imageName += photoCount + "_I" + currentIso + "_E" + currentExp + "_o"
         
         return imageName
     }
+    
     
     private func exifEdit(metadataAttachments: [String: Any]) -> [String: Any] {
         var tempData = metadataAttachments
         if var exifData = tempData[kCGImagePropertyExifDictionary as String] as? [String: Any] {
             exifData[kCGImagePropertyExifUserComment as String] = "<whatever you want to write>"
-            
             tempData[kCGImagePropertyExifDictionary as String] = exifData as Dictionary
         }
         return tempData
@@ -130,7 +142,7 @@ class PhotoCaptureProcessor: NSObject {
         
         print("Device Settings - autoAdjustVideoHDREnabled: \(device.automaticallyAdjustsVideoHDREnabled)")
         print("Device Settings - isVideoHDREnabled: \(device.isVideoHDREnabled)")
-    }
+    }    
 }
 
 extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
@@ -138,7 +150,6 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, willCapturePhotoFor resolvedSettings: AVCaptureResolvedPhotoSettings) {
         willCapturePhotoAnimation()
     }
-
     
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         
@@ -176,13 +187,35 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
             return
         }
         
-        let scenPath = createScenUrl()
-        let imageName = createImgPath(scenPath: scenPath)
-        
-        print("ScenPath: \(scenPath)")
+        let scenPathJpg = createScenUrl(format: "JPG")
+        let scenPathDng = createScenUrl(format: "DNG")
+        let imageNameJpg = createImgPath(scenPath: scenPathJpg, format: "JPG")
+        let imageNameDng = createImgPath(scenPath: scenPathDng, format: "RAW")
         
         let capturedImage = UIImage(data: jpgPhotoData)
         let imageJ: Data = UIImageJPEGRepresentation(capturedImage!, 1.0)!
+        
+//        let temp = UIImage(data: imageJ)
+//        let nums = Int((temp?.size.height)! * (temp?.size.width)! * 3)
+//        let pixelData = temp?.cgImage?.dataProvider?.data
+//
+//        let tempData: UnsafePointer<UInt8> = CFDataGetBytePtr(pixelData)
+//        var stringBuilder: String = ""
+//        let cgData = temp?.cgImage
+//        for i in 0...nums-1 {
+//            stringBuilder += String(tempData[i])
+//            stringBuilder += "\n"
+//        }
+//
+//        let stringFinal = NSString(string: stringBuilder)
+//        do {
+//            let fileURL = scenPath.appendingPathComponent("dataTest").appendingPathExtension("TXT")
+//            print("\(fileURL.path)")
+//
+//            try stringFinal.write(to: fileURL, atomically: true, encoding: 4)
+//        } catch let error {
+//            print("Unable to write txt file. Error \(error)")
+//        }
         
         let imgRef = CGImageSourceCreateWithData(imageJ as CFData, nil)!
         let uti: CFString = CGImageSourceGetType(imgRef)!
@@ -192,7 +225,7 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
         CGImageDestinationAddImageFromSource(destination, imgRef, 0, (jpgMeta as CFDictionary))
         CGImageDestinationFinalize(destination)
         
-        let jpgUrl = scenPath.appendingPathComponent(imageName).appendingPathExtension("JPG")
+        let jpgUrl = scenPathJpg.appendingPathComponent(imageNameJpg).appendingPathExtension("jpg")
         do {
             try dataWithEXIF.write(to: jpgUrl, options: .atomic)
         } catch let error {
@@ -201,7 +234,7 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
             return
         }
         
-        let dngUrl = scenPath.appendingPathComponent(imageName).appendingPathExtension("DNG")
+        let dngUrl = scenPathDng.appendingPathComponent(imageNameDng).appendingPathExtension("dng")
         do {
             try rawPhotoData.write(to: dngUrl, options: .atomic)
         } catch let error as NSError {
@@ -210,12 +243,14 @@ extension PhotoCaptureProcessor: AVCapturePhotoCaptureDelegate {
             return
         }
         
-        printSettings(resolvedSettings: resolvedSettings)
+        //printSettings(resolvedSettings: resolvedSettings)
         
         if (FileManager.default.fileExists(atPath: jpgUrl.path) && FileManager.default.fileExists(atPath: dngUrl.path)) {
             print("success saving file")
             didFinish()
         }
+        
+        
 //        PHPhotoLibrary.requestAuthorization { status in
 //            if status == .authorized {
 //                PHPhotoLibrary.shared().performChanges({
