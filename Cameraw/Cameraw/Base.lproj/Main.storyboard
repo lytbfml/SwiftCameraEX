@@ -26,8 +26,8 @@
                                     <outletCollection property="gestureRecognizers" destination="bvh-M9-YQq" appends="YES" id="YJO-9x-DNj"/>
                                 </connections>
                             </view>
-                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="VxC-x1-Gfc" userLabel="Camera Status">
-                                <rect key="frame" x="0.0" y="20" width="375" height="150"/>
+                            <view hidden="YES" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="VxC-x1-Gfc" userLabel="Camera Status">
+                                <rect key="frame" x="0.0" y="20" width="375" height="80"/>
                                 <subviews>
                                     <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="AF/AE/AWB Mode:" lineBreakMode="wordWrap" numberOfLines="4" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="65J-eR-5Bo" userLabel="Status Label">
                                         <rect key="frame" x="0.0" y="0.0" width="137.5" height="18"/>
@@ -75,7 +75,7 @@
                                     <constraint firstItem="65J-eR-5Bo" firstAttribute="leading" secondItem="VxC-x1-Gfc" secondAttribute="leading" id="f8Q-sE-2Ha"/>
                                     <constraint firstAttribute="trailing" secondItem="Z25-m2-8jz" secondAttribute="trailing" id="fZr-dW-S7s"/>
                                     <constraint firstItem="65J-eR-5Bo" firstAttribute="trailing" secondItem="VxC-x1-Gfc" secondAttribute="centerX" constant="-50" id="gMa-fX-ICF"/>
-                                    <constraint firstAttribute="height" constant="150" id="i3w-EN-1Q9"/>
+                                    <constraint firstAttribute="height" constant="80" id="i3w-EN-1Q9"/>
                                     <constraint firstItem="vCl-UJ-6lx" firstAttribute="top" secondItem="Z25-m2-8jz" secondAttribute="bottom" id="n92-Az-bf6"/>
                                     <constraint firstItem="Sc4-wH-bSK" firstAttribute="top" secondItem="vCl-UJ-6lx" secondAttribute="bottom" constant="-3" id="rSH-sb-8kR"/>
                                     <constraint firstItem="Sc4-wH-bSK" firstAttribute="leading" secondItem="65J-eR-5Bo" secondAttribute="trailing" id="yHx-De-qld"/>
@@ -115,7 +115,7 @@
                             </view>
                             <button opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="huQ-sh-buf">
                                 <rect key="frame" x="163" y="597" width="50" height="50"/>
-                                <color key="backgroundColor" white="0.66666666666666663" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="50" id="2dh-Hy-ycp"/>
                                     <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="50" id="hKx-Yq-th2"/>

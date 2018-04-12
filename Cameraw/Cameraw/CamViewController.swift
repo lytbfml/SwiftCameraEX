@@ -12,66 +12,6 @@ import Photos
 
 class CamViewController: UIViewController {
     
-    static let deviceID: String = UIDevice.current.identifierForVendor!.uuidString + "_"
-    
-    var currentSettingIndex = 0
-    var settingIndex = 0
-    var currentPhotoCount: Int = 0 {
-        didSet {
-            let fractionalProgress = Float(currentPhotoCount) / allPhotoNumsInCurrentSetting
-            let animated = currentPhotoCount != 0
-            DispatchQueue.main.async {
-                self.captureProgress.setProgress(fractionalProgress, animated: animated)
-            }
-        }
-    }
-    
-    static var currentTimestamp: String!
-    static var currentScenName: String!
-    
-    private var allPhotoNumsInCurrentSetting: Float!
-    
-    private let photoOutput = AVCapturePhotoOutput()
-    
-    private var inProgressPhotoCaptureDelegates = [Int64: PhotoCaptureProcessor]()
-    
-    private var keyValueObservations = [NSKeyValueObservation]()
-    
-    @objc var captureDevice: AVCaptureDevice?
-    
-    var videoDeviceInput: AVCaptureDeviceInput!
-    
-    private let session = AVCaptureSession()
-    
-    private var isSessionRunning = false
-    
-    private let sessionQueue = DispatchQueue(label: "session queue")
-    
-    private enum SessionSetupResult {
-        case success
-        case notAuthorized
-        case configurationFailed
-    }
-    
-    private enum CaptureOption {
-        case lockExp
-        case lockFocus
-        case manual
-        case none
-    }
-    
-    public enum WorkingMode {
-        case manualCapture
-        case aeCapture
-        case none
-    }
-    
-    private var setupResult: SessionSetupResult = .success
-    
-    private var captureOp: CaptureOption = .none
-    
-    private var workMode: WorkingMode = .aeCapture
-    
     @IBOutlet weak var previewView: PreviewView!
     
     @IBOutlet weak var statusView: UIView!
@@ -89,14 +29,85 @@ class CamViewController: UIViewController {
     @IBOutlet weak var captureMsg: UILabel!
     @IBOutlet weak var captureProgress: UIProgressView!
     
-    @IBAction func cleanBtnPressed(_ sender: Any) {
-        self.clearAllFilesFromDocDirectory()
+    
+    let session = AVCaptureSession()
+    
+    let photoOutput = AVCapturePhotoOutput()
+    
+    @objc var captureDevice: AVCaptureDevice?
+    
+    var videoDeviceInput: AVCaptureDeviceInput!
+    
+    private var isSessionRunning = false
+    
+    private let sessionQueue = DispatchQueue(label: "Configuration")
+    
+    private enum SessionSetupResult {
+        case success
+        case notAuthorized
+        case configurationFailed
     }
     
-    @IBAction func capturePhoto(_ photoButton: UIButton) {
-        
-        readyForCapture(mode: workMode)
+    private var setupResult: SessionSetupResult = .success
+    
+    private enum CaptureOption {
+        case lockExp
+        case lockFocus
+        case manual
+        case none
     }
+
+    private var captureOp: CaptureOption = .none
+
+    public enum WorkingMode {
+        case manualCapture
+        case aeCapture
+        case none
+    }
+    
+    private var workMode: WorkingMode = .aeCapture
+    
+    private var cameraState: CameraState = .initialization {
+        didSet{
+            DispatchQueue.main.async {
+                self.modeLabel.text = self.cameraState.rawValue
+            }
+        }
+    }
+    
+    public enum CameraState: String{
+        case initialization = "Initialization"
+        case previewing = "Previewing"
+        case preparing = "Preparing"
+        case preparingError = "PreparingError"
+        case capturing = "Capturing"
+        case capturingError = "CapturingError"
+        case capturingFinished = "CapturingFinished"
+    }
+    
+    private var inProgressPhotoCaptureDelegates = [Int64: PhotoCaptureProcessor]()
+    
+    private var keyValueObservations = [NSKeyValueObservation]()
+    
+    static let deviceID: String = UIDevice.current.identifierForVendor!.uuidString + "_"
+    static var currentTimestamp: String!
+    static var currentScenName: String!
+    private var allPhotoNumsInCurrentSetting: Float! = 0
+    
+    var currentSettingIndex = 0
+    var settingIndex = 0
+    var currentPhotoCount: Int = 0 {
+        didSet {
+            let fractionalProgress = Float(currentPhotoCount) / allPhotoNumsInCurrentSetting
+            let animated = currentPhotoCount != 0
+            DispatchQueue.main.async {
+                self.captureProgress.setProgress(fractionalProgress, animated: animated)
+            }
+        }
+    }
+}
+
+extension CamViewController {
     
     //------------------------------------------------------------------------------------------------------------------------------
     //---------------------------------------------MARK: View Controller Life Cycle-------------------------------------------------
@@ -104,24 +115,9 @@ class CamViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        UIConfig()
+        uiConfig()
+        checkVideoPermissions()
         previewView.session = session
-        
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
-        case .authorized:
-            break
-        case .notDetermined:
-            sessionQueue.suspend()
-            AVCaptureDevice.requestAccess(for: .video, completionHandler: { granted in
-                if !granted {
-                    self.setupResult = .notAuthorized
-                }
-                self.sessionQueue.resume()
-            })
-        default:
-            setupResult = .notAuthorized
-        }
         sessionQueue.async {
             self.configureSession()
         }
@@ -136,32 +132,14 @@ class CamViewController: UIViewController {
                 self.addObservers()
                 self.session.startRunning()
                 self.isSessionRunning = self.session.isRunning
+                self.cameraState = .previewing
                 
             case .notAuthorized:
-                DispatchQueue.main.async {
-                    let changePrivacySetting = "AVCam doesn't have permission to use the camera, please change privacy settings"
-                    let message = NSLocalizedString(changePrivacySetting, comment: "Alert message when the user has denied access to the camera")
-                    let alertController = UIAlertController(title: "AVCam", message: message, preferredStyle: .alert)
-                    
-                    alertController.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Alert OK button"),
-                                                            style: .cancel,
-                                                            handler: nil))
-                    
-                    alertController.addAction(UIAlertAction(title: NSLocalizedString("Settings", comment: "Alert button to open Settings"),
-                                                            style: .`default`, handler: { _ in UIApplication.shared.open(URL(string: UIApplicationOpenSettingsURLString)!, options: [:], completionHandler: nil)
-                    }))
-                    self.present(alertController, animated: true, completion: nil)
-                }
+                self.requestPermission()
                 
             case .configurationFailed:
-                DispatchQueue.main.async {
-                    let alertMsg = "Alert message when something goes wrong during capture session configuration"
-                    let message = NSLocalizedString("Unable to capture media", comment: alertMsg)
-                    let alertController = UIAlertController(title: "AVCam", message: message, preferredStyle: .alert)
-                    
-                    alertController.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Alert OK button"), style: .cancel, handler: nil))
-                    self.present(alertController, animated: true, completion: nil)
-                }
+                let message = NSLocalizedString("Unable to capture video", comment: "Alert message when something goes wrong during capture session configuration")
+                self.userAlertGenerator(title: "Cameraw", message: message, actions: [UIAlertAction(title: NSLocalizedString("OK", comment: "Alert OK button"), style: .cancel, handler: nil)], style: .alert)
             }
         }
     }
@@ -174,7 +152,6 @@ class CamViewController: UIViewController {
                 self.removeObservers()
             }
         }
-        
         super.viewWillDisappear(animated)
     }
     
@@ -199,97 +176,131 @@ class CamViewController: UIViewController {
         super.didReceiveMemoryWarning()
     }
     
-    private func configureSession() {
-        if setupResult != .success {
-            return
+}
+
+
+//MARK: Photo capturing process
+extension CamViewController {
+    
+    private func readyForCapture(mode: WorkingMode) {
+        DispatchQueue.main.async {
+            self.captureStatusView.isHidden = false
+            self.captureMsg.text = "Getting Ready..."
+            self.captureMsg.isHidden = false
+            self.photoButton.isEnabled = false
+            self.photoButton.alpha = 0.5
+            self.settingsPage.isEnabled = false
+            self.settingsPage.alpha = 0.5
+            self.cleanButton.isEnabled = false
+            self.cleanButton.alpha = 0.5
         }
         
-        session.beginConfiguration()
-        session.sessionPreset = .photo
+        cameraState = .preparing
         
-        let defaultVideoDevice = defaultDevice()
-        self.captureDevice = defaultVideoDevice
-        guard let videoInput = try? AVCaptureDeviceInput(device: defaultVideoDevice) else {
-            print("Unable to obtain video input for default camera.")
-            return
+        if (mode == .manualCapture) {
+            workMode = .manualCapture
+            if(SettingsController.settingsArray.count == 0) {
+                SettingsController.settingsArray.append(SettingObj(num: 1))
+                self.lockFocus()
+            }
+            else {
+                self.lockFocus()
+            }
+        } else if (mode == .aeCapture) {
+            workMode = .aeCapture
+            SettingsController.settingsArray.removeAll()
+            SettingsController.settingsArray.append(SettingObj(num: 1))
+            self.lockFocus()
         }
-        
-        if session.canAddInput(videoInput) {
-            session.addInput(videoInput)
-            self.videoDeviceInput = videoInput
-            
-            DispatchQueue.main.async {
-                let statusBarOrientation = UIApplication.shared.statusBarOrientation
-                var initialVideoOrientation: AVCaptureVideoOrientation = .portrait
-                if statusBarOrientation != .unknown {
-                    if let videoOrientation = AVCaptureVideoOrientation(interfaceOrientation: statusBarOrientation) {
-                        initialVideoOrientation = videoOrientation
+    }
+    
+    private func captureSettings(index: Int) {
+        if(index == 0 && currentSettingIndex == 0) {
+            CamViewController.currentTimestamp = getTimestamp()
+            CamViewController.currentScenName = createScenName()
+            let maxISO: Float! = captureDevice?.activeFormat.maxISO
+            let minISO: Float! = captureDevice?.activeFormat.minISO
+            let maxEXP: Float64! = CMTimeGetSeconds((captureDevice?.activeFormat.maxExposureDuration)!)
+            let minEXP: Float64! = CMTimeGetSeconds((captureDevice?.activeFormat.minExposureDuration)!)
+
+            var count = 0
+            for tempObj in SettingsController.settingsArray {
+                count += tempObj.num
+                if(!tempObj.auto) {
+                    let valid: Bool = (tempObj.iso.isLess(than: maxISO) && minISO.isLess(than: tempObj.iso) && tempObj.exp.isLess(than: maxEXP) && minEXP.isLess(than: tempObj.exp))
+                    if (!valid) {
+                        cameraState = .preparingError
+                        onAllSettingComplete(message: String(format: "The passed ISO/EXP value is outside the supported range (ISO: %.6f - %.6f ), EXP: %.6f  - %.6f)", minISO, maxISO, minEXP, maxEXP))
+                        
+                        return
                     }
                 }
-                self.previewView.videoPreviewLayer.connection?.videoOrientation = initialVideoOrientation
             }
-        } else {
-            print("Could not add video device input to the session")
-            setupResult = .configurationFailed
-            session.commitConfiguration()
-            return
+            cameraState = .capturing
+            allPhotoNumsInCurrentSetting = Float(count)
+            currentPhotoCount = 0
+            DispatchQueue.main.async {
+                self.captureMsg.text = "Capture In Progress"
+                self.captureProgress.isHidden = false
+            }
         }
         
-        // Add photo output.
-        if session.canAddOutput(photoOutput) {
-            session.addOutput(photoOutput)
-            photoOutput.isHighResolutionCaptureEnabled = true
-        } else {
-            print("Could not add photo output to the session")
-            setupResult = .configurationFailed
-            session.commitConfiguration()
-            return
-        }
+        let currentSetting = SettingsController.settingsArray[index]
         
-        session.commitConfiguration()
-    }
-    
-    func defaultDevice() -> AVCaptureDevice {
-        if let device = AVCaptureDevice.default(AVCaptureDevice.DeviceType.builtInDualCamera, for: AVMediaType.video, position: AVCaptureDevice.Position.back) {
-            print("defaultDevice - using dual cam")
-            return device // use dual camera on supported devices
-        } else if let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) {
-            print("defaultDevice - using wide angle cam")
-            return device // use default back facing camera otherwise
-        } else {
-            fatalError("All supported devices are expected to have at least one of the queried capture devices.")
+        if(currentSettingIndex == 0) {
+            if(currentSetting.auto && workMode == .manualCapture) {
+                lockExp()
+            } else if (currentSetting.auto && workMode == .aeCapture) {
+                takePhoto()
+            } else {
+                takePhotoWithBothSet(time: currentSetting.exp, isoVal: currentSetting.iso)
+            }
+        }
+        else if(currentSettingIndex < currentSetting.num) {
+            takePhoto()
         }
     }
     
-    private func UIConfig() {
-        photoButton.isEnabled = false
-        photoButton.layer.shadowColor = UIColor.black.cgColor
-        photoButton.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
-        photoButton.layer.masksToBounds = false
-        photoButton.layer.shadowRadius = 1.0
-        photoButton.layer.shadowOpacity = 0.5
-        photoButton.layer.cornerRadius = photoButton.frame.width / 2
-        
-        settingsPage.layer.shadowColor = UIColor.black.cgColor
-        settingsPage.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
-        settingsPage.layer.masksToBounds = false
-        settingsPage.layer.shadowRadius = 1.0
-        settingsPage.layer.shadowOpacity = 0.5
-        settingsPage.layer.cornerRadius = settingsPage.frame.width / 5
-        
-        cleanButton.layer.shadowColor = UIColor.black.cgColor
-        cleanButton.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
-        cleanButton.layer.masksToBounds = false
-        cleanButton.layer.shadowRadius = 1.0
-        cleanButton.layer.shadowOpacity = 0.5
-        cleanButton.layer.cornerRadius = cleanButton.frame.width / 5
-        
-        statusLabel.lineBreakMode = .byWordWrapping
-        statusLabel.text = "AF/AE/AWB Mode:\nISO:\nEXP:\nCapture Status:"
+    private func onCaptureSettingComplete() {
+        currentPhotoCount += 1
+        if(settingIndex < SettingsController.settingsArray.count) {
+            currentSettingIndex += 1
+            if(currentSettingIndex >= SettingsController.settingsArray[settingIndex].num) {
+                settingIndex += 1
+                currentSettingIndex = 0
+            }
+            if(settingIndex < SettingsController.settingsArray.count) {
+                self.captureSettings(index: settingIndex)
+            }
+            else {
+                cameraState = .capturingFinished
+                onAllSettingComplete()
+            }
+        }
     }
     
+    private func onAllSettingComplete(message: String = "Success") {
+        DispatchQueue.main.async {
+            self.captureStatusView.isHidden = true
+            self.photoButton.isEnabled = true
+            self.photoButton.alpha = 1
+            self.settingsPage.isEnabled = true
+            self.settingsPage.alpha = 1
+            self.cleanButton.isEnabled = true
+            self.cleanButton.alpha = 1
+        }
+        currentSettingIndex = 0
+        settingIndex = 0
+        currentPhotoCount = 0
+        if(cameraState == .capturingFinished) {
+            showLabelSelection()
+        } else {
+            userAlertGenerator(title: "Error", message: NSLocalizedString(message, comment: "Error message"), actions: [UIAlertAction(title: "Ok", style: .default, handler: nil)], style: .alert)
+        }
+        releaseAFAE()
+        cameraState = .previewing
+    }
     
-    // MARK: Take photo
     private func takePhoto()
     {
         let videoPreviewLayerOrientation = previewView.videoPreviewLayer.connection?.videoOrientation
@@ -297,9 +308,8 @@ class CamViewController: UIViewController {
             if let photoOutputConnection = self.photoOutput.connection(with: .video) {
                 photoOutputConnection.videoOrientation = videoPreviewLayerOrientation!
             }
-            let device = self.captureDevice!
             
-            self.printSettings(dev: device);
+            self.printSettings(dev: self.captureDevice!);
             
             let rawFormatType = kCVPixelFormatType_14Bayer_RGGB
             guard self.photoOutput.availableRawPhotoPixelFormatTypes.contains(NSNumber(value: rawFormatType).uint32Value) else {
@@ -314,7 +324,7 @@ class CamViewController: UIViewController {
             photoSettings.isAutoStillImageStabilizationEnabled = false
             photoSettings.isHighResolutionPhotoEnabled = true
             
-            let photoCaptureProcessor = PhotoCaptureProcessor(with: photoSettings, device: device, photoCount: self.currentPhotoCount, willCapturePhotoAnimation: {
+            let photoCaptureProcessor = PhotoCaptureProcessor(with: photoSettings, device: self.captureDevice!, photoCount: self.currentPhotoCount, willCapturePhotoAnimation: {
 //                DispatchQueue.main.async {
 //                    self.previewView.videoPreviewLayer.opacity = 0
 //                    UIView.animate(withDuration: 0.25) {
@@ -375,7 +385,7 @@ class CamViewController: UIViewController {
             let expMax: Float64 = expI * 2
             let expMin: Float64 = expI / 2
             let expMean: Float64 = (expMax + expMin) / 2
-
+            
             SettingsController.settingsArray.append(SettingObj(iso: isoMin, exp: expMin, num: 1))
             SettingsController.settingsArray.append(SettingObj(iso: isoMin, exp: expMean, num: 1))
             SettingsController.settingsArray.append(SettingObj(iso: isoMin, exp: expMax, num: 1))
@@ -389,260 +399,15 @@ class CamViewController: UIViewController {
         }
     }
     
-    private func readyForCapture(mode: WorkingMode) {
-        DispatchQueue.main.async {
-            self.captureStatusView.isHidden = false
-            self.captureMsg.text = "Getting Ready..."
-            self.captureMsg.isHidden = false
-        }
-        
-        if (mode == .manualCapture) {
-            workMode = .manualCapture
-            if(SettingsController.settingsArray.count == 0) {
-                SettingsController.settingsArray.append(SettingObj(num: 1))
-                self.lockFocus()
-            }
-            else {
-                self.lockFocus()
-            }
-        } else if (mode == .aeCapture) {
-            workMode = .aeCapture
-            SettingsController.settingsArray.removeAll()
-            SettingsController.settingsArray.append(SettingObj(num: 1))
-            self.lockFocus()
-        }
-    }
-    
-    private func addObservers() {
-        let keyValueObservation = session.observe(\.isRunning, options: .new) { _, change in
-            guard let isSessionRunning = change.newValue else { return }
-            DispatchQueue.main.async {
-                self.photoButton.isEnabled = isSessionRunning
-                self.statusValue.text = self.getStatusValue()
-            }
-        }
-        keyValueObservations.append(keyValueObservation)
-        
-        NotificationCenter.default.addObserver(self, selector: #selector(subjectAreaDidChange), name: .AVCaptureDeviceSubjectAreaDidChange, object: videoDeviceInput.device)
-        NotificationCenter.default.addObserver(self, selector: #selector(sessionRuntimeError), name: .AVCaptureSessionRuntimeError, object: session)
-        
-        NotificationCenter.default.addObserver(self, selector: #selector(sessionWasInterrupted), name: .AVCaptureSessionWasInterrupted, object: session)
-        NotificationCenter.default.addObserver(self, selector: #selector(sessionInterruptionEnded), name: .AVCaptureSessionInterruptionEnded, object: session)
-        
-        self.addObserver(self, forKeyPath: "captureDevice.exposureMode" , options: .new, context: nil)
-        self.addObserver(self, forKeyPath: "captureDevice.exposureDuration", options: .new, context: nil)
-        self.addObserver(self, forKeyPath: "captureDevice.whiteBalanceMode", options: .new, context: nil)
-        self.addObserver(self, forKeyPath: "captureDevice.focusMode", options: .new, context: nil)
-        self.addObserver(self, forKeyPath: "captureDevice.ISO", options: .new, context: nil)
-    }
-    
-    private func removeObservers() {
-        NotificationCenter.default.removeObserver(self)
-        for keyValueObservation in keyValueObservations {
-            keyValueObservation.invalidate()
-        }
-        keyValueObservations.removeAll()
-        self.removeObserver(self, forKeyPath: "captureDevice.exposureMode")
-        self.removeObserver(self, forKeyPath: "captureDevice.exposureDuration")
-        self.removeObserver(self, forKeyPath: "captureDevice.whiteBalanceMode")
-        self.removeObserver(self, forKeyPath: "captureDevice.ISO")
-        self.removeObserver(self, forKeyPath: "captureDevice.focusMode")
-    }
-    
-    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
-        
-        if keyPath == "captureDevice.exposureMode" {
-            let expModeVal = captureDevice?.exposureMode.rawValue
-            DispatchQueue.main.async {
-                self.statusValue.text = self.getStatusValue()
-            }
-            if(self.captureOp == .lockExp && expModeVal == 0) {
-                self.captureOp = .none
-                onLockExpComplete()
-            }
-        }
-        
-        if keyPath == "captureDevice.exposureDuration" {
-            let exposureDurationSeconds = CMTimeGetSeconds((self.captureDevice?.exposureDuration)!)
-            DispatchQueue.main.async {
-                self.expLabel.text = String(format: "1/%.f", 1.0 / exposureDurationSeconds)
-            }
-        }
-        
-        if keyPath == "captureDevice.focusMode" {
-            let focusModeVal = captureDevice?.focusMode.rawValue
-            DispatchQueue.main.async {
-                self.statusValue.text = self.getStatusValue()
-            }
-            if(focusModeVal == 0 && self.captureOp == .lockFocus) {
-                self.captureOp = .none
-                onFocusComplete()
-            }
-        }
-        
-        if keyPath == "captureDevice.ISO" {
-            DispatchQueue.main.async {
-                self.isoLabel.text = String(format: "%.f", (self.captureDevice?.iso)!)
-            }
-        }
-    }
-    
-    @objc
-    func subjectAreaDidChange(notification: NSNotification) {
-        //let devicePoint = CGPoint(x: 0.5, y: 0.5)
-        //focus(with: .continuousAutoFocus, exposureMode: .continuousAutoExposure, at: devicePoint, monitorSubjectAreaChange: false)
-        fatalError("------subjectAreaDidChange------")
-    }
-    
-    @objc
-    func sessionRuntimeError(notification: NSNotification) {
-        guard let error = notification.userInfo?[AVCaptureSessionErrorKey] as? AVError else { return }
-        print("Capture session runtime error: \(error)")
-        
-        if error.code == .mediaServicesWereReset {
-            sessionQueue.async {
-                if self.isSessionRunning {
-                    self.session.startRunning()
-                    self.isSessionRunning = self.session.isRunning
-                }
-            }
-        }
-    }
-    
-    @objc
-    func sessionWasInterrupted(notification: NSNotification) {
-        
-        if let userInfoValue = notification.userInfo?[AVCaptureSessionInterruptionReasonKey] as AnyObject?,
-            let reasonIntegerValue = userInfoValue.integerValue,
-            let reason = AVCaptureSession.InterruptionReason(rawValue: reasonIntegerValue) {
-            print("Capture session was interrupted with reason \(reason)")
-        }
-    }
-    
-    @objc
-    func sessionInterruptionEnded(notification: NSNotification) {
-        print("Capture session interruption ended")
-    }
-    
-    private func clearAllFilesFromDocDirectory(){
-        let fileManager = FileManager.default
-        let docPath = URL(fileURLWithPath: NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])
+    private func releaseAFAE() {
         do {
-            let filePaths = try fileManager.contentsOfDirectory(atPath: docPath.path)
-            for filePath in filePaths {
-                try fileManager.removeItem(at: docPath.appendingPathComponent(filePath))
-            }
-            let alert = UIAlertController(title: "Complete!", message: "All files removed", preferredStyle: UIAlertControllerStyle.alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
-            self.present(alert, animated: true, completion: nil)
-        } catch {
-            print("Could not clear temp folder: \(error)")
+            try captureDevice?.lockForConfiguration()
+            captureDevice?.focusMode = .continuousAutoFocus
+            captureDevice?.exposureMode = .continuousAutoExposure
+            captureDevice?.unlockForConfiguration()
+        } catch let error {
+            print("Could not lock device for configuration: \(error)")
         }
-    }
-    
-    //------------------------------------------------------------------------------------------------------------------------------
-    //---------------------------------------------------Helper Method--------------------------------------------------------------
-    //------------------------------------------------------------------------------------------------------------------------------
-    
-    private func captureSettings(index: Int) {
-        if(index == 0 && currentSettingIndex == 0) {
-            
-            
-            CamViewController.currentTimestamp = getTimestamp()
-            CamViewController.currentScenName = createScenName()
-            var count = 0
-            for tempObj in SettingsController.settingsArray {
-                count += tempObj.num
-            }
-            allPhotoNumsInCurrentSetting = Float(count)
-            currentPhotoCount = 0
-            DispatchQueue.main.async {
-                self.captureMsg.text = "Capture In Progress"
-                self.captureProgress.isHidden = false
-            }
-        }
-        
-        let currentSetting = SettingsController.settingsArray[index]
-        
-        if(currentSettingIndex == 0) {
-            if(currentSetting.auto && workMode == .manualCapture) {
-                lockExp()
-            } else if (currentSetting.auto && workMode == .aeCapture) {
-                takePhoto()
-            } else {
-                takePhotoWithBothSet(time: currentSetting.exp, isoVal: currentSetting.iso)
-            }
-        }
-        else if(currentSettingIndex < currentSetting.num) {
-            takePhoto()
-        }
-    }
-    
-    private func onCaptureSettingComplete() {
-        //MARK: Repeated Capturing
-        currentPhotoCount += 1
-        if(settingIndex < SettingsController.settingsArray.count) {
-            currentSettingIndex += 1
-            if(currentSettingIndex >= SettingsController.settingsArray[settingIndex].num) {
-                settingIndex += 1
-                currentSettingIndex = 0
-            }
-            if(settingIndex < SettingsController.settingsArray.count) {
-                self.captureSettings(index: settingIndex)
-            }
-            else {
-                onAllSettingComplete()
-            }
-        }
-    }
-    
-    private func onAllSettingComplete() {
-        DispatchQueue.main.async {
-            self.captureStatusView.isHidden = true
-        }
-        currentSettingIndex = 0
-        settingIndex = 0
-        currentPhotoCount = 0
-        let alert = UIAlertController(title: "Capture complete. Please confirm the following:", message: "During the capture session,\n1.the device camera did not move\n2.the scene content remained the same\n\nClick 'Confirm' to choose scene label, or 'Discard' to discard the current scene images.", preferredStyle: UIAlertControllerStyle.alert)
-        alert.addAction(UIAlertAction(title: "Confirm", style: .default, handler: { (action) in
-            let actSheet = UIAlertController(title: "Choose scene label", message: "", preferredStyle: .actionSheet)
-            actSheet.addAction(UIAlertAction(title: "No label", style: .default, handler: nil))
-            actSheet.addAction(UIAlertAction(title: "Books", style: .default, handler: { (action) in
-                self.renameCurrentScene(label: "Books")
-            }))
-            actSheet.addAction(UIAlertAction(title: "Apple(s)", style: .default, handler: { (action) in
-                
-            }))
-            actSheet.addAction(UIAlertAction(title: "Orange(s)", style: .default, handler: { (action) in
-                
-            }))
-            actSheet.addAction(UIAlertAction(title: "Chair(s)", style: .default, handler: { (action) in
-                
-            }))
-            actSheet.addAction(UIAlertAction(title: "Stairs/Stairwell", style: .default, handler: { (action) in
-                
-            }))
-            actSheet.addAction(UIAlertAction(title: "Backpack", style: .default, handler: { (action) in
-                
-            }))
-            actSheet.addAction(UIAlertAction(title: "Clock", style: .default, handler: { (action) in
-                
-            }))
-            actSheet.addAction(UIAlertAction(title: "Keyboard", style: .default, handler: { (action) in
-                
-            }))
-            actSheet.addAction(UIAlertAction(title: "Water bottle", style: .default, handler: { (action) in
-                
-            }))
-            actSheet.addAction(UIAlertAction(title: "Keys", style: .default, handler: { (action) in
-                
-            }))
-            self.present(actSheet, animated: true, completion: nil)
-        }))
-        alert.addAction(UIAlertAction(title: "Discard", style: .destructive, handler: { (action) in
-            self.removeCurrentScene()
-        }))
-        self.present(alert, animated: true, completion: nil)
     }
     
     private func takePhotoWithAuto() {
@@ -692,6 +457,284 @@ class CamViewController: UIViewController {
             print("Could not lock device for configuration: \(error)")
         }
     }
+}
+
+//MARK: Configuration Process
+extension CamViewController {
+    
+    private func uiConfig() {
+        photoButton.isEnabled = false
+        photoButton.layer.shadowColor = UIColor.black.cgColor
+        photoButton.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
+        photoButton.layer.masksToBounds = false
+        photoButton.layer.shadowRadius = 1.0
+        photoButton.layer.shadowOpacity = 0.5
+        photoButton.layer.cornerRadius = photoButton.frame.width / 2
+        
+        settingsPage.isEnabled = false
+        settingsPage.layer.shadowColor = UIColor.black.cgColor
+        settingsPage.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
+        settingsPage.layer.masksToBounds = false
+        settingsPage.layer.shadowRadius = 1.0
+        settingsPage.layer.shadowOpacity = 0.5
+        settingsPage.layer.cornerRadius = settingsPage.frame.width / 5
+        
+        cleanButton.layer.shadowColor = UIColor.black.cgColor
+        cleanButton.layer.shadowOffset = CGSize(width: 0.0, height: 2.0)
+        cleanButton.layer.masksToBounds = false
+        cleanButton.layer.shadowRadius = 1.0
+        cleanButton.layer.shadowOpacity = 0.5
+        cleanButton.layer.cornerRadius = cleanButton.frame.width / 5
+        
+        statusLabel.lineBreakMode = .byWordWrapping
+        statusLabel.text = "AF/AE/AWB Mode:\nISO:\nEXP:\nCapture Status:"
+        
+        captureProgress.transform = CGAffineTransform(scaleX: 1, y: 4)
+
+    }
+    
+    private func checkVideoPermissions() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            break
+        case .notDetermined:
+            sessionQueue.suspend()
+            AVCaptureDevice.requestAccess(for: .video, completionHandler: { granted in
+                if !granted {
+                    self.setupResult = .notAuthorized
+                }
+                self.sessionQueue.resume()
+            })
+        default:
+            setupResult = .notAuthorized
+        }
+    }
+    
+    private func requestPermission() {
+        DispatchQueue.main.async {
+            let changePrivacySetting = "Cameraw doesn't have permission to use the camera, please change privacy settings"
+            let message = NSLocalizedString(changePrivacySetting, comment: "Alert message when the user has denied access to the camera")
+            let alertController = UIAlertController(title: "Cameraw", message: message, preferredStyle: .alert)
+            
+            alertController.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Alert OK button"), style: .cancel, handler: nil))
+            
+            alertController.addAction(UIAlertAction(title: NSLocalizedString("Settings", comment: "Alert button to open Settings"), style: .default, handler: { _ in
+                UIApplication.shared.open(URL(string: UIApplicationOpenSettingsURLString)!, options: [:], completionHandler: nil)
+            }))
+            self.present(alertController, animated: true, completion: nil)
+        }
+    }
+    
+    private func configureSession() {
+        if setupResult != .success {
+            return
+        }
+        
+        session.beginConfiguration()
+        session.sessionPreset = .photo
+        
+        do {
+            captureDevice = defaultDevice()
+            let videoInput = try AVCaptureDeviceInput(device: captureDevice!)
+            
+            if session.canAddInput(videoInput) {
+                session.addInput(videoInput)
+                videoDeviceInput = videoInput
+                
+                DispatchQueue.main.async {
+                    let statusBarOrientation = UIApplication.shared.statusBarOrientation
+                    var initialVideoOrientation: AVCaptureVideoOrientation = .portrait
+                    if statusBarOrientation != .unknown {
+                        if let videoOrientation = AVCaptureVideoOrientation(interfaceOrientation: statusBarOrientation) {
+                            initialVideoOrientation = videoOrientation
+                        }
+                    }
+                    self.previewView.videoPreviewLayer.connection?.videoOrientation = initialVideoOrientation
+                }
+            } else {
+                print("Could not add video device input to the session")
+                setupResult = .configurationFailed
+                session.commitConfiguration()
+                return
+            }
+            
+        } catch {
+            print("Could not create video device input: \(error)")
+            setupResult = .configurationFailed
+            session.commitConfiguration()
+            return
+        }
+        
+        if session.canAddOutput(photoOutput) {
+            session.addOutput(photoOutput)
+            photoOutput.isHighResolutionCaptureEnabled = true
+            photoOutput.isLivePhotoCaptureEnabled = false
+            photoOutput.isDepthDataDeliveryEnabled = false
+        } else {
+            print("Could not add photo output to the session")
+            setupResult = .configurationFailed
+            session.commitConfiguration()
+            return
+        }
+        
+        session.commitConfiguration()
+    }
+    
+    func defaultDevice() -> AVCaptureDevice {
+        if let device = AVCaptureDevice.default(AVCaptureDevice.DeviceType.builtInDualCamera, for: AVMediaType.video, position: AVCaptureDevice.Position.back) {
+            print("defaultDevice - using dual cam")
+            return device // use dual camera on supported devices
+        } else if let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) {
+            print("defaultDevice - using wide angle cam")
+            return device // use default back facing camera otherwise
+        } else {
+            fatalError("All supported devices are expected to have at least one of the queried capture devices.")
+        }
+    }
+}
+
+//MARK: Observer and
+extension CamViewController {
+    private func addObservers() {
+        
+        let sessionObservation = session.observe(\.isRunning, options: .new) { _, change in
+            guard let isSessionRunning = change.newValue else { return }
+            DispatchQueue.main.async {
+                self.photoButton.isEnabled = isSessionRunning
+                self.statusValue.text = self.getStatusValue()
+                self.statusView.isHidden = !(isSessionRunning)
+                self.settingsPage.isEnabled = isSessionRunning
+            }
+        }
+        
+        let expObservation = captureDevice?.observe(\.exposureDuration, options: .new, changeHandler: { (_, change) in
+            guard let newExp = change.newValue else { return }
+            let exposureDurationSeconds = CMTimeGetSeconds(newExp)
+            DispatchQueue.main.async {
+                self.expLabel.text = String(format: "1/%.f", 1.0 / exposureDurationSeconds)
+            }
+        })
+        
+        let isoObservation = captureDevice?.observe(\.iso, options: .new, changeHandler: { (_, change) in
+            DispatchQueue.main.async {
+                self.isoLabel.text = String(format: "%.f", change.newValue!)
+            }
+        })
+        
+        
+        keyValueObservations.append(sessionObservation)
+        keyValueObservations.append(expObservation!)
+        keyValueObservations.append(isoObservation!)
+        
+        NotificationCenter.default.addObserver(self, selector: #selector(subjectAreaDidChange), name: .AVCaptureDeviceSubjectAreaDidChange, object: captureDevice)
+        NotificationCenter.default.addObserver(self, selector: #selector(sessionRuntimeError), name: .AVCaptureSessionRuntimeError, object: session)
+        NotificationCenter.default.addObserver(self, selector: #selector(sessionWasInterrupted), name: .AVCaptureSessionWasInterrupted, object: session)
+        NotificationCenter.default.addObserver(self, selector: #selector(sessionInterruptionEnded), name: .AVCaptureSessionInterruptionEnded, object: session)
+        self.addObserver(self, forKeyPath: #keyPath(captureDevice.exposureMode), options: .new, context: nil)
+        //self.addObserver(self, forKeyPath: "captureDevice.exposureMode" , options: .new, context: nil)
+        self.addObserver(self, forKeyPath: #keyPath(captureDevice.whiteBalanceMode), options: .new, context: nil)
+        self.addObserver(self, forKeyPath: #keyPath(captureDevice.focusMode), options: .new, context: nil)
+    }
+    
+    private func removeObservers() {
+        NotificationCenter.default.removeObserver(self)
+        for keyValueObservation in keyValueObservations {
+            keyValueObservation.invalidate()
+        }
+        keyValueObservations.removeAll()
+        self.removeObserver(self, forKeyPath: #keyPath(captureDevice.exposureMode))
+        self.removeObserver(self, forKeyPath: #keyPath(captureDevice.whiteBalanceMode))
+        self.removeObserver(self, forKeyPath: #keyPath(captureDevice.focusMode))
+    }
+    
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
+        
+        if keyPath == #keyPath(captureDevice.exposureMode) {
+            let expModeVal = captureDevice?.exposureMode.rawValue
+            DispatchQueue.main.async {
+                self.statusValue.text = self.getStatusValue()
+            }
+            if(self.captureOp == .lockExp && expModeVal == 0) {
+                self.captureOp = .none
+                onLockExpComplete()
+            }
+        }
+        
+        if keyPath == #keyPath(captureDevice.focusMode) {
+            let focusModeVal = captureDevice?.focusMode.rawValue
+            DispatchQueue.main.async {
+                self.statusValue.text = self.getStatusValue()
+            }
+            if(focusModeVal == 0 && self.captureOp == .lockFocus) {
+                self.captureOp = .none
+                onFocusComplete()
+            }
+        }
+        
+        if keyPath == #keyPath(captureDevice.whiteBalanceMode) {
+            let wbModeVal = captureDevice?.whiteBalanceMode.rawValue
+            DispatchQueue.main.async {
+                self.statusValue.text = self.getStatusValue()
+            }
+        }
+    }
+    
+    
+    @objc
+    func subjectAreaDidChange(notification: NSNotification) {
+        //let devicePoint = CGPoint(x: 0.5, y: 0.5)
+        //focus(with: .continuousAutoFocus, exposureMode: .continuousAutoExposure, at: devicePoint, monitorSubjectAreaChange: false)
+        fatalError("------subjectAreaDidChange------")
+        
+    }
+    
+    @objc
+    func sessionRuntimeError(notification: NSNotification) {
+        guard let error = notification.userInfo?[AVCaptureSessionErrorKey] as? AVError else { return }
+        print("Capture session runtime error: \(error)")
+        
+        if error.code == .mediaServicesWereReset {
+            sessionQueue.async {
+                if self.isSessionRunning {
+                    self.session.startRunning()
+                    self.isSessionRunning = self.session.isRunning
+                }
+            }
+        }
+    }
+    
+    @objc
+    func sessionWasInterrupted(notification: NSNotification) {
+        
+        if let userInfoValue = notification.userInfo?[AVCaptureSessionInterruptionReasonKey] as AnyObject?,
+            let reasonIntegerValue = userInfoValue.integerValue,
+            let reason = AVCaptureSession.InterruptionReason(rawValue: reasonIntegerValue) {
+            print("Capture session was interrupted with reason \(reason)")
+        }
+    }
+    
+    @objc
+    func sessionInterruptionEnded(notification: NSNotification) {
+        print("Capture session interruption ended")
+    }
+}
+
+extension CamViewController {
+    @IBAction func cleanBtnPressed(_ sender: Any) {
+        self.clearAllFilesFromDocDirectory()
+    }
+    
+    @IBAction func capturePhoto(_ photoButton: UIButton) {
+        self.readyForCapture(mode: workMode)
+    }
+}
+
+
+//------------------------------------------------------------------------------------------------------------------------------
+//---------------------------------------------MARK: Helper Method--------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------
+
+extension CamViewController {
     
     private func getTimestamp() -> String {
         let date : Date = Date()
@@ -750,6 +793,84 @@ class CamViewController: UIViewController {
             let alert2 = UIAlertController(title: "Complete!", message: "Scene discard", preferredStyle: UIAlertControllerStyle.alert)
             alert2.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
             self.present(alert2, animated: true, completion: nil)
+        } catch {
+            print("Could not clear temp folder: \(error)")
+        }
+    }
+    
+    private func userAlertGenerator(title: String?, message: String, actions: [UIAlertAction], style: UIAlertControllerStyle) {
+        DispatchQueue.main.async {
+            let alert = UIAlertController(title: title, message: message, preferredStyle: style)
+            for action in actions {
+                alert.addAction(action)
+            }
+            self.present(alert, animated: true, completion: nil)
+        }
+    }
+    
+    private func showLabelSelection() {
+        let title = "Capture complete. Please confirm the following:"
+        let msg = NSLocalizedString("During the capture session,\n1.the device camera did not move\n2.the scene content remained the same\n\nClick 'Confirm' to choose scene label, or 'Discard' to discard the current scene images.", comment: "Explain the options")
+        var actions = [UIAlertAction]()
+        
+        let actionConfirm = UIAlertAction(title: "Confirm", style: .default, handler: { _ in
+            var labelActions = [UIAlertAction]()
+            labelActions.append(UIAlertAction(title: "No label", style: .default, handler: nil))
+            labelActions.append(UIAlertAction(title: "Books", style: .default, handler: { _ in
+                self.renameCurrentScene(label: "books")
+            }))
+            labelActions.append(UIAlertAction(title: "Apple(s)", style: .default, handler: { _ in
+                self.renameCurrentScene(label: "apple")
+            }))
+            labelActions.append(UIAlertAction(title: "Orange(s)", style: .default, handler: { (action) in
+                self.renameCurrentScene(label: "orange")
+            }))
+            labelActions.append(UIAlertAction(title: "Chair(s)", style: .default, handler: { (action) in
+                self.renameCurrentScene(label: "chair")
+            }))
+            labelActions.append(UIAlertAction(title: "Stairs/Stairwell", style: .default, handler: { (action) in
+                self.renameCurrentScene(label: "stairs")
+            }))
+            labelActions.append(UIAlertAction(title: "Backpack", style: .default, handler: { (action) in
+                self.renameCurrentScene(label: "chair")
+            }))
+            labelActions.append(UIAlertAction(title: "Clock", style: .default, handler: { (action) in
+                self.renameCurrentScene(label: "clock")
+            }))
+            labelActions.append(UIAlertAction(title: "Keyboard", style: .default, handler: { (action) in
+                self.renameCurrentScene(label: "keyboard")
+            }))
+            labelActions.append(UIAlertAction(title: "Water bottle", style: .default, handler: { (action) in
+                self.renameCurrentScene(label: "bottle")
+            }))
+            labelActions.append(UIAlertAction(title: "Keys", style: .default, handler: { (action) in
+                self.renameCurrentScene(label: "keys")
+            }))
+
+            self.userAlertGenerator(title: "Choose scene label", message: "Please assign one of the following labels", actions: labelActions, style: .actionSheet)
+        })
+        
+        let actionDiscard = UIAlertAction(title: "Discard", style: .destructive, handler: { (action) in
+            self.removeCurrentScene()
+        })
+        actions.append(actionConfirm)
+        actions.append(actionDiscard)
+        
+        userAlertGenerator(title: title, message: msg, actions: actions, style: .alert)
+
+    }
+    
+    private func clearAllFilesFromDocDirectory(){
+        let fileManager = FileManager.default
+        let docPath = URL(fileURLWithPath: NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])
+        do {
+            let filePaths = try fileManager.contentsOfDirectory(atPath: docPath.path)
+            for filePath in filePaths {
+                try fileManager.removeItem(at: docPath.appendingPathComponent(filePath))
+            }
+            let alert = UIAlertController(title: "Complete!", message: "All files removed", preferredStyle: UIAlertControllerStyle.alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+            self.present(alert, animated: true, completion: nil)
         } catch {
             print("Could not clear temp folder: \(error)")
         }
